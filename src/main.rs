@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
-use jlox_rs::Scanner;
-use std::io;
-use std::io::prelude::*;
+use jlox_rs::{Scanner, Token};
 use std::env;
+use std::io;
 use std::io::Read;
+use std::io::prelude::*;
 use std::iter::ExactSizeIterator;
 use std::path::Path;
 use std::process::exit;
@@ -13,7 +13,7 @@ fn main() -> Result<()> {
     if length > 1 {
         eprintln!("Usage: jlox [script]");
         exit(64);
-    } else if length == 1 {
+    } else if length == 2 {
         let _ = args.next();
         let file_path = args.next().expect("already check this value exists");
         run_file(file_path);
@@ -27,24 +27,32 @@ fn run_file(path: String) -> Result<()> {
     let path = Path::new(&path);
     let mut file = std::fs::File::open(path).context("can not open file")?;
     let mut body = String::new();
-    let body = file.read_to_string(&mut body)?;
+    file.read_to_string(&mut body)?;
     run(body)?;
     Ok(())
 }
 
 fn run_prompt() -> Result<()> {
     let stdin = io::stdin();
+    print!("> ");
+    let _ = io::stdout().flush();
     for line in stdin.lock().lines() {
         let line = line?;
         if line == "" {
             break;
         }
         run(line);
+        print!("> ");
+        let _ = io::stdout().flush();
     }
     Ok(())
 }
 
 fn run(source: String) -> Result<()> {
-    let sacnner = Scanner::new(source);
+    let scanner = Scanner::new(source);
+    let tokens = scanner.scan_tokens();
+    for t in tokens {
+        println!("{:?}", t);
+    }
     Ok(())
 }

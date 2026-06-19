@@ -1,3 +1,7 @@
 mod scanner;
+mod error;
 
-pub use scanner::Scanner;
+pub use scanner::*;
+pub use error::*;
+
+
