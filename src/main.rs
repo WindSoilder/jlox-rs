@@ -1,3 +1,50 @@
-fn main() {
-    println!("Hello, world!");
+use anyhow::{Context, Result};
+use jlox_rs::Scanner;
+use std::io;
+use std::io::prelude::*;
+use std::env;
+use std::io::Read;
+use std::iter::ExactSizeIterator;
+use std::path::Path;
+use std::process::exit;
+fn main() -> Result<()> {
+    let mut args = env::args();
+    let length = args.len();
+    if length > 1 {
+        eprintln!("Usage: jlox [script]");
+        exit(64);
+    } else if length == 1 {
+        let _ = args.next();
+        let file_path = args.next().expect("already check this value exists");
+        run_file(file_path);
+    } else {
+        run_prompt();
+    }
+    Ok(())
+}
+
+fn run_file(path: String) -> Result<()> {
+    let path = Path::new(&path);
+    let mut file = std::fs::File::open(path).context("can not open file")?;
+    let mut body = String::new();
+    let body = file.read_to_string(&mut body)?;
+    run(body)?;
+    Ok(())
+}
+
+fn run_prompt() -> Result<()> {
+    let stdin = io::stdin();
+    for line in stdin.lock().lines() {
+        let line = line?;
+        if line == "" {
+            break;
+        }
+        run(line);
+    }
+    Ok(())
+}
+
+fn run(source: String) -> Result<()> {
+    let sacnner = Scanner::new(source);
+    Ok(())
 }
