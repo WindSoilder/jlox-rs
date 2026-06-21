@@ -1,5 +1,5 @@
 use crate::error;
-use std::fmt::Display;
+use std::{any::Any, fmt::Display};
 
 pub struct Scanner {
     source: Vec<u8>,
@@ -94,8 +94,30 @@ impl Scanner {
             }
             ' ' | '\r' | '\t' => (), // Ignore whitespace.
             '\n' => {self.line += 1;}
+            '"' => self.string(),
             _ => error(self.line, "Unexpected character."),
         }
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+        if self.is_at_end() {
+            error(self.line, "Unterminated string.");
+            return
+        }
+
+        // The closing "
+        self.advance();
+
+        // Trim the surrounding quotes.
+        let value = String::from_utf8_lossy(&self.source[self.start + 1..self.current - 1]);
+        self.add_token(TokenType::String, value);
+
     }
 
     fn peek(&self) -> char {
@@ -127,9 +149,14 @@ impl Scanner {
         let one_token = Token::new(
             token,
             String::from_utf8_lossy(&self.source[self.current..self.current]).into_owned(),
+            Box::new(Option::<()>::None),
             self.line,
         );
         self.tokens.push(one_token)
+    }
+    
+    fn add_token_with_literal(&mut self, token: TokenType, literal: Box<dyn Any>) {
+
     }
 }
 
@@ -138,14 +165,16 @@ impl Scanner {
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
+    literal: Box<dyn Any>,
     line: usize,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, line: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Box<dyn Any>, line: usize) -> Self {
         Self {
             token_type,
             lexeme,
+            literal,
             line,
         }
     }
