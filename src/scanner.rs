@@ -28,7 +28,7 @@ impl Scanner {
         }
 
         self.tokens
-            .push(Token::new(TokenType::Eof, "".to_string(), self.line));
+            .push(Token::new(TokenType::Eof, "".to_string(), Box::new(Option::<()>::None), self.line));
         self.tokens
     }
 
@@ -93,7 +93,9 @@ impl Scanner {
                 }
             }
             ' ' | '\r' | '\t' => (), // Ignore whitespace.
-            '\n' => {self.line += 1;}
+            '\n' => {
+                self.line += 1;
+            }
             '"' => self.string(),
             _ => error(self.line, "Unexpected character."),
         }
@@ -108,16 +110,16 @@ impl Scanner {
         }
         if self.is_at_end() {
             error(self.line, "Unterminated string.");
-            return
+            return;
         }
 
         // The closing "
         self.advance();
 
         // Trim the surrounding quotes.
-        let value = String::from_utf8_lossy(&self.source[self.start + 1..self.current - 1]);
-        self.add_token(TokenType::String, value);
-
+        let value =
+            String::from_utf8_lossy(&self.source[self.start + 1..self.current - 1]).into_owned();
+        self.add_token_with_literal(TokenType::String, Box::new(value));
     }
 
     fn peek(&self) -> char {
@@ -148,15 +150,21 @@ impl Scanner {
     fn add_token(&mut self, token: TokenType) {
         let one_token = Token::new(
             token,
-            String::from_utf8_lossy(&self.source[self.current..self.current]).into_owned(),
+            String::from_utf8_lossy(&self.source[self.start..self.current]).into_owned(),
             Box::new(Option::<()>::None),
             self.line,
         );
         self.tokens.push(one_token)
     }
-    
-    fn add_token_with_literal(&mut self, token: TokenType, literal: Box<dyn Any>) {
 
+    fn add_token_with_literal(&mut self, token: TokenType, literal: Box<dyn Any>) {
+        let one_token = Token::new(
+            token,
+            String::from_utf8_lossy(&self.source[self.start..self.current]).into_owned(),
+            literal,
+            self.line,
+        );
+        self.tokens.push(one_token)
     }
 }
 
