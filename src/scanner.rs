@@ -27,18 +27,18 @@ static KEYWORDS: LazyLock<HashMap<String, TokenType>> = LazyLock::new(|| {
     keywords
 });
 
-pub struct Scanner {
-    source: Vec<u8>,
-    tokens: Vec<Token>,
+pub struct Scanner<'a> {
+    source: &'a [u8],
+    tokens: Vec<Token<'a>>,
     start: usize,
     current: usize,
     line: usize,
 }
 
-impl Scanner {
-    pub fn new(source: String) -> Self {
+impl<'a> Scanner<'a> {
+    pub fn new(source: &'a str) -> Self {
         Self {
-            source: source.into_bytes(),
+            source: source.as_bytes(),
             tokens: vec![],
             start: 0,
             current: 0,
@@ -46,7 +46,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(mut self) -> Vec<Token> {
+    pub fn scan_tokens(mut self) -> Vec<Token<'a>> {
         while !self.is_at_end() {
             // We are at the beginning of the next lexeme.
             self.start = self.current;
@@ -55,7 +55,7 @@ impl Scanner {
 
         self.tokens.push(Token::new(
             TokenType::Eof,
-            "".to_string(),
+            b"",
             Box::new(Option::<()>::None),
             self.line,
         ));
@@ -155,8 +155,7 @@ impl Scanner {
         self.advance();
 
         // Trim the surrounding quotes.
-        let value =
-            String::from_utf8_lossy(&self.source[self.start + 1..self.current - 1]).into_owned();
+        let value = self.source[self.start..self.current].to_vec();
         self.add_token_with_literal(TokenType::String, Box::new(value));
     }
 
@@ -188,7 +187,7 @@ impl Scanner {
     fn add_token(&mut self, token: TokenType) {
         let one_token = Token::new(
             token,
-            String::from_utf8_lossy(&self.source[self.start..self.current]).into_owned(),
+            &self.source[self.start..self.current],
             Box::new(Option::<()>::None),
             self.line,
         );
@@ -198,7 +197,7 @@ impl Scanner {
     fn add_token_with_literal(&mut self, token: TokenType, literal: Box<dyn Any>) {
         let one_token = Token::new(
             token,
-            String::from_utf8_lossy(&self.source[self.start..self.current]).into_owned(),
+            &self.source[self.start..self.current],
             literal,
             self.line,
         );
@@ -258,17 +257,21 @@ impl Scanner {
     }
 }
 
-// TODO: change lexeme from String to &[u8]
 #[derive(Debug)]
-pub struct Token {
+pub struct Token<'a> {
     token_type: TokenType,
-    lexeme: String,
+    lexeme: &'a [u8],
     literal: Box<dyn Any>,
     line: usize,
 }
 
-impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: Box<dyn Any>, line: usize) -> Self {
+impl<'a> Token<'a> {
+    pub fn new(
+        token_type: TokenType,
+        lexeme: &'a [u8],
+        literal: Box<dyn Any>,
+        line: usize,
+    ) -> Self {
         Self {
             token_type,
             lexeme,
@@ -278,9 +281,10 @@ impl Token {
     }
 }
 
-impl Display for Token {
+impl<'a> Display for Token<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {}", self.token_type, self.lexeme)
+        let lexeme_str = String::from_utf8_lossy(self.lexeme);
+        write!(f, "{:?} {}", self.token_type, lexeme_str)
     }
 }
 
