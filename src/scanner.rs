@@ -1,13 +1,14 @@
 use crate::error;
-use std::{any::Any, fmt::Display};
+use std::any::Any;
+use std::collections::HashMap;
+use std::f64;
 use std::fmt::Display;
 use std::sync::LazyLock;
-use std::collections::HashMap;
 
 static KEYWORDS: LazyLock<HashMap<String, TokenType>> = LazyLock::new(|| {
     use TokenType::*;
     let mut keywords = HashMap::new();
-    keywords.insert("and".to_string(),And);
+    keywords.insert("and".to_string(), And);
     keywords.insert("class".to_string(), Class);
     keywords.insert("else".to_string(), Else);
     keywords.insert("false".to_string(), False);
@@ -52,8 +53,12 @@ impl Scanner {
             self.scan_token();
         }
 
-        self.tokens
-            .push(Token::new(TokenType::Eof, "".to_string(), Box::new(Option::<()>::None), self.line));
+        self.tokens.push(Token::new(
+            TokenType::Eof,
+            "".to_string(),
+            Box::new(Option::<()>::None),
+            self.line,
+        ));
         self.tokens
     }
 
@@ -122,7 +127,15 @@ impl Scanner {
                 self.line += 1;
             }
             '"' => self.string(),
-            _ => error(self.line, "Unexpected character."),
+            _ => {
+                if self.is_digit(ch) {
+                    self.number()
+                } else if self.is_alpha(ch) {
+                    self.identifier()
+                } else {
+                    error(self.line, "Unexpected character.")
+                }
+            }
         }
     }
 
@@ -198,20 +211,23 @@ impl Scanner {
 
     fn number(&mut self) {
         while self.is_digit(self.peek()) {
-            self.advance()
+            self.advance();
         }
 
         // Look for fractional part
-        if (self.peek() == '.' && self.is_digit(self.peek_next())) {
+        if self.peek() == '.' && self.is_digit(self.peek_next()) {
             // Consume the "."
-            self.advance()
+            self.advance();
 
             while self.is_digit(self.peek()) {
-                self.advance()
+                self.advance();
             }
         }
 
-        // self.add_token(TokenType::Number, ..)
+        let number = String::from_utf8_lossy(&self.source[self.start..self.current])
+            .parse::<f64>()
+            .expect("already checked to be a float");
+        self.add_token_with_literal(TokenType::Number, Box::new(number))
     }
 
     fn peek_next(&self) -> char {
@@ -224,9 +240,13 @@ impl Scanner {
 
     fn identifier(&mut self) {
         while self.is_alpha_numeric(self.peek()) {
-            self.advance()
+            self.advance();
         }
-        // self.add_token(TokenType::Identifier)
+        let text = String::from_utf8_lossy(&self.source[self.start..self.current]);
+        let token_type = *KEYWORDS
+            .get(text.as_ref())
+            .unwrap_or(&TokenType::Identifier);
+        self.add_token(token_type)
     }
 
     fn is_alpha(&self, c: char) -> bool {
@@ -236,8 +256,6 @@ impl Scanner {
     fn is_alpha_numeric(&self, c: char) -> bool {
         self.is_alpha(c) || self.is_digit(c)
     }
-
-
 }
 
 // TODO: change lexeme from String to &[u8]
@@ -267,7 +285,7 @@ impl Display for Token {
 }
 
 #[rustfmt::skip]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen, RightParen, LeftBrace, RightBrace,
