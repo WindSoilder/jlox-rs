@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use jlox_rs::Scanner;
+use jlox_rs::{Scanner, Token};
 use std::env;
 use std::io;
 use std::io::Read;
@@ -10,15 +10,15 @@ use std::process::exit;
 fn main() -> Result<()> {
     let mut args = env::args();
     let length = args.len();
-    if length > 2 {
+    if length > 1 {
         eprintln!("Usage: jlox [script]");
         exit(64);
     } else if length == 2 {
         let _ = args.next();
         let file_path = args.next().expect("already check this value exists");
-        run_file(file_path)?;
+        run_file(file_path);
     } else {
-        run_prompt()?;
+        run_prompt();
     }
     Ok(())
 }
@@ -41,7 +41,7 @@ fn run_prompt() -> Result<()> {
         if line == "" {
             break;
         }
-        run(line)?;
+        run(line);
         print!("> ");
         let _ = io::stdout().flush();
     }
@@ -49,10 +49,10 @@ fn run_prompt() -> Result<()> {
 }
 
 fn run(source: String) -> Result<()> {
-    let scanner = Scanner::new(&source);
+    let scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-    for _t in tokens {
-        // println!("{:?}", t);
+    for t in tokens {
+        println!("{:?}", t);
     }
     Ok(())
 }
