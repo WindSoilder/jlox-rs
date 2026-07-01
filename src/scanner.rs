@@ -261,7 +261,7 @@ impl Scanner {
 // TODO: change lexeme from String to &[u8]
 #[derive(Debug)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     lexeme: String,
     literal: Box<dyn Any>,
     line: usize,
@@ -285,7 +285,7 @@ impl Display for Token {
 }
 
 #[rustfmt::skip]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen, RightParen, LeftBrace, RightBrace,
