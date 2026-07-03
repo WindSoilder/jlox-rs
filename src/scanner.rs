@@ -259,12 +259,12 @@ impl Scanner {
 }
 
 // TODO: change lexeme from String to &[u8]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
-    lexeme: String,
+    pub lexeme: String,
     pub literal: Box<dyn Any + Clone>,
-    line: usize,
+    pub line: usize,
 }
 
 impl Token {

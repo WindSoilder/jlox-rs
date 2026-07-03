@@ -1,21 +1,37 @@
-use crate::scanner::Token;
 use crate::{Token, TokenType};
+use crate::error::error_at_token;
 use std::any::Any;
 enum Expr {
     Binary((Box<Expr>, Token, Box<Expr>)),
     Grouping(Box<Expr>),
     Literal(Box<dyn Any>),
     Unary((Token, Box<Expr>)),
+    Garbage,
+}
+
+struct ParseError {
+    token: Token,
+    message: String,
 }
 
 struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    parse_errors: Vec<ParseError>,
 }
 
 impl Parser {
     fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self { tokens, current: 0, parse_errors: vec![] }
+    }
+
+    fn parse(&mut self) -> Option<Expr> {
+        let expr = self.expression();
+        if self.is_at_end() {
+            Some(expr)
+        } else {
+            None
+        }
     }
 
     fn expression(&mut self) -> Expr {
@@ -121,25 +137,65 @@ impl Parser {
 
     fn primary(&mut self) -> Expr {
         if self.is_match(&[TokenType::False]) {
-            Expr::Literal(Box::new(false))
+            return Expr::Literal(Box::new(false))
         } else if self.is_match(&[TokenType::True]) {
-            Expr::Literal(Box::new(true))
+            return Expr::Literal(Box::new(true))
         } else if self.is_match(&[TokenType::Nil]) {
-            Expr::Literal(Box::new(None))
+            return Expr::Literal(Box::new(None))
         } else if self.is_match(&[TokenType::Number, TokenType::String]) {
-            Expr::Literal(self.previous().literal.clone())
+            return Expr::Literal(self.previous().literal.clone())
         } else if self.is_match(&[TokenType::LeftParen]) {
             let expr = self.expression();
-            self.consume(TokenType::RightParen, "Expect ')' after expression.");
-            Expr::Grouping(Box::new(expr))
+            if self.consume(TokenType::RightParen, "Expect ')' after expression.").is_none() {
+                return Expr::Garbage
+            } else {
+                return Expr::Grouping(Box::new(expr))
+            }
+        }
+
+        self.error(self.peek(), "Expect expression.");
+        Expr::Garbage
+    }
+
+    fn error(&mut self, token: Token, message: &str) {
+        let parse_error = ParseError {
+            token,
+            message: message.to_string(),
+        };
+        self.parse_errors.push(parse_error);
+        error_at_token(token, message);
+    }
+
+    fn consume(&mut self, token_type: TokenType, message: &str) -> Option<Token> {
+        if self.check(token_type) {
+            Some(self.advance())
+        } else {
+            self.error(self.peek(), message);
+            None
         }
     }
 
-    fn consume(&mut self, token_type: TokenType, message: &str) -> Token{
-        if self.check(token_type) {
-            self.advance()
-        } else {
-            self.error(self.peek(), message)
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => return,
+                _ => {}
+            }
+
+            self.advance();
         }
     }
 }
