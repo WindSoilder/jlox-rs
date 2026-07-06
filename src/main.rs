@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use jlox_rs::Scanner;
+use jlox_rs::{Scanner, Parser};
 use std::env;
 use std::io;
 use std::io::Read;
@@ -51,8 +51,13 @@ fn run_prompt() -> Result<()> {
 fn run(source: String) -> Result<()> {
     let scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-    for t in tokens {
+    println!("==========tokens==========");
+    for t in tokens.iter() {
         println!("{:?}", t);
     }
+    println!("==========exprs==========");
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse();
+    println!("{:?}", expr);
     Ok(())
 }

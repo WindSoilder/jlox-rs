@@ -1,0 +1,225 @@
+program        → block EOF ;
+
+block          → pipeline ( terminator pipeline )* terminator? ;
+terminator     → NEWLINE | ";" ;
+
+pipeline       → pipe_element ( pipe pipe_element )* ;
+pipe           → "|"
+               | "err>|" | "e>|"
+               | "out+err>|" | "err+out>|" | "o+e>|" | "e+o>|" ;
+
+pipe_element   → statement redirection* ;
+redirection    → file_redirection expression
+               | pipe_redirection ;
+file_redirection
+               → "out>" | "o>" | "out>>" | "o>>"
+               | "err>" | "e>" | "err>>" | "e>>"
+               | "out+err>" | "err+out>" | "o+e>" | "e+o>"
+               | "out+err>>" | "err+out>>" | "o+e>>" | "e+o>>" ;
+pipe_redirection
+               → "err>|" | "e>|"
+               | "out+err>|" | "err+out>|" | "o+e>|" | "e+o>|" ;
+
+--------------------------
+
+statement      → declaration
+               | assignment
+               | expression_command ;
+
+declaration    → let_decl
+               | mut_decl
+               | const_decl
+               | def_decl
+               | extern_decl
+               | for_decl
+               | module_decl
+               | use_decl
+               | source_decl
+               | alias_decl
+               | export_decl
+               | export_env_decl
+               | hide_decl
+               | overlay_decl
+               | plugin_use_decl ;
+
+let_decl       → "let" binding "=" pipeline ;
+mut_decl       → "mut" binding "=" pipeline ;
+const_decl     → "const" binding "=" pipeline ;
+binding        → IDENTIFIER type_annotation? ;
+
+def_decl       → "def" def_option* command_name signature io_signature? block_literal ;
+extern_decl    → "extern" command_name signature ;
+def_option     → "--env" | "--wrapped" ;
+io_signature   → ":" "[" type "->" type "]" ;
+
+for_decl       → "for" IDENTIFIER "in" expression block_literal ;
+module_decl    → "module" IDENTIFIER block_literal ;
+use_decl       → "use" import_pattern ;
+source_decl    → "source" expression ;
+alias_decl     → "alias" command_name "=" pipeline ;
+export_decl    → "export" declaration ;
+export_env_decl
+               → "export-env" block_literal ;
+hide_decl      → "hide" import_pattern ;
+overlay_decl   → "overlay" ( "hide" | "new" | "use" | "list" ) argument* ;
+plugin_use_decl
+               → "plugin" "use" expression ;
+
+---------------------------
+
+expression_command
+               → env_shorthand* command ;
+env_shorthand  → ENV_NAME "=" ( STRING | variable ) ;
+
+command        → external_call
+               | internal_call
+               | expression ;
+
+external_call  → "^" bare_word external_arg* ;
+external_arg   → bare_word | STRING | variable | subexpression ;
+
+internal_call  → command_name argument* ;
+command_name   → IDENTIFIER+
+               | STRING ;
+argument       → flag
+               | spread
+               | expression
+               | bare_word ;
+flag           → "--" IDENTIFIER ( "=" expression )?
+               | "-" SHORT_FLAGS ;
+spread         → "..." expression ;
+
+---------------------------
+
+expression     → assignment_expr ;
+assignment_expr
+               → cell_ref assign_op pipeline
+               | logical_or ;
+assign_op      → "=" | "+=" | "-=" | "*=" | "/=" | "++=" ;
+
+logical_or     → logical_xor ( "or" logical_xor )* ;
+logical_xor    → logical_and ( "xor" logical_and )* ;
+logical_and    → bit_or ( "and" bit_or )* ;
+bit_or         → bit_xor ( "bit-or" bit_xor )* ;
+bit_xor        → bit_and ( "bit-xor" bit_and )* ;
+bit_and        → comparison ( "bit-and" comparison )* ;
+comparison     → shift ( comparison_op shift )* ;
+comparison_op  → "==" | "!=" | "<" | "<=" | ">" | ">="
+               | "=~" | "!~"
+               | "in" | "not-in"
+               | "has" | "not-has"
+               | "starts-with" | "not-starts-with"
+               | "ends-with" | "not-ends-with"
+               | "++" ;
+shift          → term ( ( "bit-shl" | "bit-shr" ) term )* ;
+term           → factor ( ( "+" | "-" ) factor )* ;
+factor         → power ( ( "*" | "/" | "//" | "mod" ) power )* ;
+power          → unary ( "**" power )? ;
+unary          → "not" unary
+               | postfix ;
+postfix        → primary cell_path? ;
+
+---------------------------
+
+primary        → literal
+               | variable
+               | range
+               | list
+               | table
+               | record
+               | closure
+               | block_literal
+               | subexpression
+               | if_expr
+               | match_expr ;
+
+literal        → INT | FLOAT | FILESIZE | DURATION | DATE
+               | STRING | RAW_STRING | INTERPOLATED_STRING
+               | BINARY | BOOL | "null" ;
+
+variable       → "$" IDENTIFIER
+               | "$in" | "$env" | "$nu" ;
+cell_ref       → variable cell_path? ;
+cell_path      → cell_member+ ;
+cell_member    → "." IDENTIFIER
+               | "." INT
+               | "." STRING
+               | "?" "." IDENTIFIER
+               | "?" "." INT
+               | "?" "." STRING ;
+
+subexpression  → "(" block ")" ;
+block_literal  → "{" block "}" ;
+
+list           → "[" list_item ( separator? list_item )* separator? "]" ;
+list_item      → expression | spread ;
+
+table          → "[" table_header ";" table_row* "]" ;
+table_header   → "[" IDENTIFIER* "]" ;
+table_row      → "[" expression* "]" ;
+
+record         → "{" record_item ( separator? record_item )* separator? "}" ;
+record_item    → record_key ":" expression ;
+record_key     → IDENTIFIER | STRING ;
+
+closure        → "{||" block "}"
+               | "{|" closure_param_list? "|" block "}" ;
+closure_param_list
+               → closure_param ( "," closure_param )* ","? ;
+closure_param  → IDENTIFIER type_annotation? ;
+
+range          → range_bound? range_step? range_op range_bound? ;
+range_step     → ".." range_bound ;
+range_op       → ".." | "..=" | "..<" ;
+range_bound    → postfix ;
+
+separator      → "," | NEWLINE | ";" ;
+
+---------------------------
+
+if_expr        → "if" expression block_literal else_clause? ;
+else_clause    → "else" ( if_expr | block_literal ) ;
+
+match_expr     → "match" expression match_block ;
+match_block    → "{" match_arm ( separator match_arm )* separator? "}" ;
+match_arm      → pattern guard? "=>" ( expression | block_literal ) ;
+guard          → "if" expression ;
+
+pattern        → or_pattern ;
+or_pattern     → single_pattern ( "|" single_pattern )* ;
+single_pattern → "_"
+               | literal
+               | variable
+               | list_pattern
+               | record_pattern ;
+list_pattern   → "[" pattern ( "," pattern )* ","? "]" ;
+record_pattern → "{" record_pattern_item ( "," record_pattern_item )* ","? "}" ;
+record_pattern_item
+               → record_key ":" pattern ;
+
+---------------------------
+
+signature      → "[" signature_param ( ","? signature_param )* ","? "]" ;
+signature_param
+               → positional_param
+               | rest_param
+               | flag_param ;
+positional_param
+               → IDENTIFIER "?"? type_annotation? default_value? ;
+rest_param     → "..." IDENTIFIER type_annotation? ;
+flag_param     → "--" IDENTIFIER short_flag? type_annotation? default_value? ;
+short_flag     → "(" "-" IDENTIFIER ")" ;
+type_annotation
+               → ":" type ;
+default_value  → "=" expression ;
+type           → IDENTIFIER ( "<" type_list? ">" )? ;
+type_list      → type ( "," type )* ","? ;
+
+---------------------------
+
+import_pattern → IDENTIFIER import_tail? ;
+import_tail    → "::" import_pattern
+               | "::" "*"
+               | "::" "{" IDENTIFIER ( "," IDENTIFIER )* ","? "}" ;
+
+bare_word      → BARE ;

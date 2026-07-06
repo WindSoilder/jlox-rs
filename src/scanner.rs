@@ -1,5 +1,4 @@
 use crate::error;
-use std::any::Any;
 use std::collections::HashMap;
 use std::f64;
 use std::fmt::Display;
@@ -53,12 +52,8 @@ impl Scanner {
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(
-            TokenType::Eof,
-            "".to_string(),
-            Box::new(Option::<()>::None),
-            self.line,
-        ));
+        self.tokens
+            .push(Token::new(TokenType::Eof, "".to_string(), None, self.line));
         self.tokens
     }
 
@@ -157,7 +152,7 @@ impl Scanner {
         // Trim the surrounding quotes.
         let value =
             String::from_utf8_lossy(&self.source[self.start + 1..self.current - 1]).into_owned();
-        self.add_token_with_literal(TokenType::String, Box::new(value));
+        self.add_token_with_literal(TokenType::String, Literal::String(value));
     }
 
     fn peek(&self) -> char {
@@ -189,17 +184,17 @@ impl Scanner {
         let one_token = Token::new(
             token,
             String::from_utf8_lossy(&self.source[self.start..self.current]).into_owned(),
-            Box::new(Option::<()>::None),
+            None,
             self.line,
         );
         self.tokens.push(one_token)
     }
 
-    fn add_token_with_literal(&mut self, token: TokenType, literal: Box<dyn Any>) {
+    fn add_token_with_literal(&mut self, token: TokenType, literal: Literal) {
         let one_token = Token::new(
             token,
             String::from_utf8_lossy(&self.source[self.start..self.current]).into_owned(),
-            literal,
+            Some(literal),
             self.line,
         );
         self.tokens.push(one_token)
@@ -227,7 +222,7 @@ impl Scanner {
         let number = String::from_utf8_lossy(&self.source[self.start..self.current])
             .parse::<f64>()
             .expect("already checked to be a float");
-        self.add_token_with_literal(TokenType::Number, Box::new(number))
+        self.add_token_with_literal(TokenType::Number, Literal::Number(number))
     }
 
     fn peek_next(&self) -> char {
@@ -258,17 +253,30 @@ impl Scanner {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Literal {
+    Bool(bool),
+    Nil,
+    Number(f64),
+    String(String),
+}
+
 // TODO: change lexeme from String to &[u8]
 #[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    pub literal: Box<dyn Any + Clone>,
+    pub literal: Option<Literal>,
     pub line: usize,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: Box<dyn Any>, line: usize) -> Self {
+    pub fn new(
+        token_type: TokenType,
+        lexeme: String,
+        literal: Option<Literal>,
+        line: usize,
+    ) -> Self {
         Self {
             token_type,
             lexeme,

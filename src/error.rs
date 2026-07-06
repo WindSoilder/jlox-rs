@@ -3,7 +3,7 @@ pub fn error(line: usize, message: &str) {
     report(line, "", message);
 }
 
-pub fn error_at_token(token: Token, message: &str) {
+pub fn error_at_token(token: &Token, message: &str) {
     if token.token_type == TokenType::Eof {
         report(token.line, "at end", message);
     } else {
