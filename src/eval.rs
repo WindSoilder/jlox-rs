@@ -1,9 +1,11 @@
 use crate::TokenType;
 use crate::parser::Expr;
 use crate::scanner::Literal;
+use anyhow::Result;
+use anyhow::anyhow;
 
-#[derive(Eq, PartialEq)]
-enum Value {
+#[derive(PartialEq, Debug)]
+pub enum Value {
     String(String),
     Null,
     Number(f64),
@@ -17,32 +19,37 @@ fn is_truthy(val: &Value) -> bool {
         _ => true,
     }
 }
-pub fn evaluate(expr: &Expr) -> Value {
-    match expr {
+pub fn evaluate(expr: &Expr) -> Result<Value> {
+    let result = match expr {
         Expr::Literal(lit) => match lit {
             Literal::String(s) => Value::String(s.to_string()),
             Literal::Nil => Value::Null,
             Literal::Number(n) => Value::Number(*n),
             Literal::Bool(b) => Value::Bool(*b),
         },
-        Expr::Grouping(g) => evaluate(g.as_ref()),
+        Expr::Grouping(g) => evaluate(g.as_ref())?,
         Expr::Unary((op, expr)) => {
-            let right = evaluate(expr.as_ref());
+            let right = evaluate(expr.as_ref())?;
 
             match op.token_type {
-                TokenType::Minus if let Value::Number(n) = right => Value::Number(-n),
+                TokenType::Minus => {
+                    if let Value::Number(n) = right {
+                        Value::Number(-n)
+                    } else {
+                        return Err(anyhow!("Operand must be a number"));
+                    }
+                }
                 TokenType::Bang => Value::Bool(!is_truthy(&right)),
-                // NOTE: how to handle error?
-                _ => unreachable!("."),
+                _ => return Err(anyhow!("unary operator must by '-' or '!'")),
             }
         }
         Expr::Binary((left, op, right)) => {
-            let left = evaluate(left.as_ref());
-            let right = evaluate(right.as_ref());
+            let left = evaluate(left.as_ref())?;
+            let right = evaluate(right.as_ref())?;
             // separate out for `!=` and `==` operator
             match op.token_type {
-                TokenType::BangEqual => return Value::Bool(left != right),
-                TokenType::EqualEqual => return Value::Bool(left == right),
+                TokenType::BangEqual => return Ok(Value::Bool(left != right)),
+                TokenType::EqualEqual => return Ok(Value::Bool(left == right)),
                 _ => {}
             }
 
@@ -56,16 +63,17 @@ pub fn evaluate(expr: &Expr) -> Value {
                     TokenType::GreaterEqual => Value::Bool(l >= r),
                     TokenType::Less => Value::Bool(l < r),
                     TokenType::LessEqual => Value::Bool(l <= r),
-                    _ => unreachable!("."),
+                    invalid => return Err(anyhow!("invalid operator {:?}", invalid))
                 },
                 (Value::String(l), Value::String(r)) => match op.token_type {
                     TokenType::Plus => Value::String(format!("{l}{r}")),
-                    _ => unreachable!("."),
+                    _ => return Err(anyhow!("String only support '+' operator"))
                 },
-                _ => unreachable!("."),
+                _ => return Err(anyhow!("Operands must be two numbers or two strings"))
             };
             result
         }
-        _ => todo!(".."),
-    }
+        Expr::Garbage => return Err(anyhow!("Get garbage result"))
+    };
+    Ok(result)
 }

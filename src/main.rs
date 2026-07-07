@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use jlox_rs::evaluate;
 use jlox_rs::{Scanner, Parser};
 use std::env;
 use std::io;
@@ -59,5 +60,13 @@ fn run(source: String) -> Result<()> {
     let mut parser = Parser::new(tokens);
     let expr = parser.parse();
     println!("{:?}", expr);
+    if let Some(expr) = expr {
+        let eval_result = evaluate(&expr);
+        println!("==========eval result==========");
+        match eval_result {
+            Ok(val) => println!("{val:?}"),
+            Err(err) => eprintln!("{err:?}")
+        }
+    }
     Ok(())
 }
