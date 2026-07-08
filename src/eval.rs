@@ -1,8 +1,22 @@
-use crate::TokenType;
+use std::fmt::Display;
+
+use crate::error::JloxError;
 use crate::parser::Expr;
 use crate::scanner::Literal;
+use crate::TokenType;
 use anyhow::Result;
-use anyhow::anyhow;
+
+pub struct Interpreter;
+
+impl Interpreter {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn interpret(&self, expr: &Expr) -> Result<Value> {
+        evaluate(expr)
+    }
+}
 
 #[derive(PartialEq, Debug)]
 pub enum Value {
@@ -12,6 +26,17 @@ pub enum Value {
     Bool(bool),
 }
 
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::String(s) => write!(f, "{s}"),
+            Value::Null => write!(f, "nil"),
+            Value::Number(n) => write!(f, "{n}"),
+            Value::Bool(b) => write!(f, "{b}"),
+        }
+    }
+}
+
 fn is_truthy(val: &Value) -> bool {
     match val {
         Value::Null => false,
@@ -19,6 +44,15 @@ fn is_truthy(val: &Value) -> bool {
         _ => true,
     }
 }
+
+fn eval_error(line: usize, message: impl Into<String>) -> anyhow::Error {
+    JloxError::EvalError {
+        line: line as u32,
+        message: message.into(),
+    }
+    .into()
+}
+
 pub fn evaluate(expr: &Expr) -> Result<Value> {
     let result = match expr {
         Expr::Literal(lit) => match lit {
@@ -36,11 +70,11 @@ pub fn evaluate(expr: &Expr) -> Result<Value> {
                     if let Value::Number(n) = right {
                         Value::Number(-n)
                     } else {
-                        return Err(anyhow!("Operand must be a number"));
+                        return Err(eval_error(op.line, "Operand must be a number"));
                     }
                 }
                 TokenType::Bang => Value::Bool(!is_truthy(&right)),
-                _ => return Err(anyhow!("unary operator must by '-' or '!'")),
+                _ => return Err(eval_error(op.line, "unary operator must by '-' or '!'")),
             }
         }
         Expr::Binary((left, op, right)) => {
@@ -63,17 +97,27 @@ pub fn evaluate(expr: &Expr) -> Result<Value> {
                     TokenType::GreaterEqual => Value::Bool(l >= r),
                     TokenType::Less => Value::Bool(l < r),
                     TokenType::LessEqual => Value::Bool(l <= r),
-                    invalid => return Err(anyhow!("invalid operator {:?}", invalid))
+                    invalid => {
+                        return Err(eval_error(
+                            op.line,
+                            format!("invalid operator {:?}", invalid),
+                        ))
+                    }
                 },
                 (Value::String(l), Value::String(r)) => match op.token_type {
                     TokenType::Plus => Value::String(format!("{l}{r}")),
-                    _ => return Err(anyhow!("String only support '+' operator"))
+                    _ => return Err(eval_error(op.line, "String only support '+' operator")),
                 },
-                _ => return Err(anyhow!("Operands must be two numbers or two strings"))
+                _ => {
+                    return Err(eval_error(
+                        op.line,
+                        "Operands must be two numbers or two strings",
+                    ))
+                }
             };
             result
         }
-        Expr::Garbage => return Err(anyhow!("Get garbage result"))
+        Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
     };
     Ok(result)
 }

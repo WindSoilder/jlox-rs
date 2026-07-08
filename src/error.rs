@@ -1,4 +1,15 @@
 use crate::{Token, TokenType};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum JloxError {
+    #[error("{message}\n[line {line}]")]
+    EvalError {
+        line: u32,
+        message: String
+    }
+}
+
 pub fn error(line: usize, message: &str) {
     report(line, "", message);
 }
