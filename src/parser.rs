@@ -24,7 +24,35 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Expr> {
+    pub fn parse(&mut self) -> Stmt {
+        let mut statements = vec![];
+        while !self.is_at_end() {
+            statements.push(self.statement())
+        }
+        statements
+    }
+
+    fn statement(&mut self) {
+        if self.is_match(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Stmt{
+        let value = self.expression();
+        self.consume(TokenType::Semicolon, "Expect ';' after value.");
+        Stmt::Print(value)
+    }
+
+    fn expression_statement(&mut self) -> Stmt {
+        let expr = self.expression();
+        consume(TokenType::Semicolon, "Expect ';' after expression.");
+        Stmt::Expression(expr)
+    }
+
+    pub fn parse_back(&mut self) -> Option<Expr> {
         let prev_error_len = self.parse_errors.len();
         let expr = self.expression();
         let error_len = self.parse_errors.len();
