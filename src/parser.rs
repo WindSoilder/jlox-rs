@@ -1,14 +1,8 @@
 use crate::error::error_at_token;
 use crate::{Literal, Token, TokenType};
+use crate::expr::Expr;
+use crate::stmt::Stmt;
 
-#[derive(Debug, Clone)]
-pub enum Expr {
-    Binary((Box<Expr>, Token, Box<Expr>)),
-    Grouping(Box<Expr>),
-    Literal(Literal),
-    Unary((Token, Box<Expr>)),
-    Garbage,
-}
 
 pub struct ParseError {
     token: Token,

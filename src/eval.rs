@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::error::JloxError;
-use crate::parser::Expr;
+use crate::Expr;
 use crate::scanner::Literal;
 use crate::TokenType;
 use anyhow::Result;
