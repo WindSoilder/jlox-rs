@@ -1,4 +1,4 @@
-3 + 4
-"adfasdf"
-1 + -'asdf'
-33
+print "one";
+print true + 3;
+print true;
+print 2 + 1;

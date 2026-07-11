@@ -1,8 +1,7 @@
 use crate::error::error_at_token;
-use crate::{Literal, Token, TokenType};
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-
+use crate::{Literal, Token, TokenType};
 
 pub struct ParseError {
     token: Token,
@@ -24,15 +23,18 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Stmt {
+    pub fn parse(&mut self) -> Option<Vec<Stmt>> {
         let mut statements = vec![];
         while !self.is_at_end() {
-            statements.push(self.statement())
+            match self.statement() {
+                Some(stmt) => statements.push(stmt),
+                None => return None,
+            }
         }
-        statements
+        Some(statements)
     }
 
-    fn statement(&mut self) {
+    fn statement(&mut self) -> Option<Stmt> {
         if self.is_match(&[TokenType::Print]) {
             self.print_statement()
         } else {
@@ -40,16 +42,16 @@ impl Parser {
         }
     }
 
-    fn print_statement(&mut self) -> Stmt{
+    fn print_statement(&mut self) -> Option<Stmt> {
         let value = self.expression();
-        self.consume(TokenType::Semicolon, "Expect ';' after value.");
-        Stmt::Print(value)
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")
+            .map(|_| Stmt::Print(value))
     }
 
-    fn expression_statement(&mut self) -> Stmt {
+    fn expression_statement(&mut self) -> Option<Stmt> {
         let expr = self.expression();
-        consume(TokenType::Semicolon, "Expect ';' after expression.");
-        Stmt::Expression(expr)
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")
+            .map(|_| Stmt::Expression(expr))
     }
 
     pub fn parse_back(&mut self) -> Option<Expr> {

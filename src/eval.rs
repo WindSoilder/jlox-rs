@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::error::JloxError;
-use crate::Expr;
+use crate::{Expr, Stmt};
 use crate::scanner::Literal;
 use crate::TokenType;
 use anyhow::Result;
@@ -13,8 +13,24 @@ impl Interpreter {
         Self
     }
 
-    pub fn interpret(&self, expr: &Expr) -> Result<Value> {
-        evaluate(expr)
+    pub fn interpret(&self, statements: &[Stmt]) -> Result<()> {
+        for one_stmt in statements {
+            self.execute(one_stmt)?
+        }
+        Ok(())
+    }
+
+    fn execute(&self, statement: &Stmt) -> Result<()> {
+        match statement {
+            Stmt::Print(expr) => {
+                let result = evaluate(expr)?;
+                println!("{}", result);
+            }
+            Stmt::Expression(expr) => {
+                evaluate(expr)?;
+            }
+        }
+        Ok(())
     }
 }
 

@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use jlox_rs::{Interpreter, evaluate};
-use jlox_rs::{Scanner, Parser};
+use jlox_rs::{Interpreter};
+use jlox_rs::{Parser, Scanner};
 use std::env;
 use std::io;
 use std::io::Read;
@@ -52,21 +52,19 @@ fn run_prompt() -> Result<()> {
 fn run(source: String) -> Result<()> {
     let scanner = Scanner::new(source);
     let tokens = scanner.scan_tokens();
-    println!("==========tokens==========");
-    for t in tokens.iter() {
-        println!("{:?}", t);
-    }
-    println!("==========exprs==========");
+    // println!("==========tokens==========");
+    // for t in tokens.iter() {
+    //     println!("{:?}", t);
+    // }
+    // println!("==========exprs==========");
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse();
-    println!("{:?}", expr);
+    let statements = parser.parse();
+    // println!("{:?}", statements);
     let interpreter = Interpreter::new();
-    if let Some(expr) = expr {
+    if let Some(expr) = statements {
         let eval_result = interpreter.interpret(&expr);
-        println!("==========eval result==========");
-        match eval_result {
-            Ok(val) => println!("{val}"),
-            Err(err) => eprintln!("{err:?}")
+        if let Err(err) = eval_result {
+            eprintln!("Error {err:?}")
         }
     }
     Ok(())

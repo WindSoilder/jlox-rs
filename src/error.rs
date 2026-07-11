@@ -3,7 +3,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JloxError {
-    #[error("{message}\n[line {line}]")]
+    #[error("[line {line}]: {message}")]
     EvalError {
         line: u32,
         message: String
