@@ -55,7 +55,7 @@ unary          → ( "!" | "-" ) unary
 primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
 
-# var decl
+# var decl and assignment
 program        → declaration* EOF ;
 
 declaration    → varDecl
@@ -68,6 +68,8 @@ exprStmt       → expression ";" ;
 printStmt      → "print" expression ";" ;
 
 expression     → equality ;
+assignment     → IDENTIFIER "=" assignment
+               | equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;

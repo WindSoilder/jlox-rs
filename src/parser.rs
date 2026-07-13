@@ -94,7 +94,24 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+
+        if self.is_match(&[TokenType::Equal]) {
+            let equals = self.previous().clone();
+            let value = self.assignment();
+
+            if let Expr::Var(token) = expr {
+                return Expr::Assignment((token, Box::new(value)))
+            }
+            self.error(equals, "Invalid assignment target.");
+            return Expr::Garbage;
+        }
+        expr
+
     }
 
     fn equality(&mut self) -> Expr {

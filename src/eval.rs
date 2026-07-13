@@ -109,6 +109,11 @@ impl Interpreter {
                 result
             }
             Expr::Var(token) => self.environment.get(token)?.clone(),
+            Expr::Assignment((name, value)) => {
+                let value = self.evaluate(value)?;
+                self.environment.assign(name, value.clone())?;
+                value
+            },
             Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
         };
         Ok(result)
