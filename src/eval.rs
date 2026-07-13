@@ -29,6 +29,7 @@ impl Interpreter {
             Stmt::Expression(expr) => {
                 evaluate(expr)?;
             }
+            Stmt::Var(var_decl) => todo!()
         }
         Ok(())
     }
@@ -133,6 +134,7 @@ pub fn evaluate(expr: &Expr) -> Result<Value> {
             };
             result
         }
+        Expr::Var(token) => todo!(),
         Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
     };
     Ok(result)

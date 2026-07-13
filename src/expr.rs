@@ -5,5 +5,6 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(Literal),
     Unary((Token, Box<Expr>)),
+    Var(Token),
     Garbage,
 }

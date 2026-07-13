@@ -1,7 +1,7 @@
 use crate::error::error_at_token;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-use crate::{Literal, Token, TokenType};
+use crate::{Literal, Token, TokenType, VarDecl};
 
 pub struct ParseError {
     token: Token,
@@ -26,12 +26,40 @@ impl Parser {
     pub fn parse(&mut self) -> Option<Vec<Stmt>> {
         let mut statements = vec![];
         while !self.is_at_end() {
-            match self.statement() {
+            match self.declaration() {
                 Some(stmt) => statements.push(stmt),
                 None => return None,
             }
         }
         Some(statements)
+    }
+
+    fn declaration(&mut self) -> Option<Stmt> {
+        let result = if self.is_match(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+        if result.is_none() {
+            self.synchronize();
+        }
+        None
+    }
+
+    fn var_declaration(&mut self) -> Option<Stmt> {
+        let name = self.consume(TokenType::Identifier, "Expect variable name")?;
+        let mut initializer = None;
+        if self.is_match(&[TokenType::Equal]) {
+            initializer = Some(self.expression());
+            if matches!(initializer, Some(Expr::Garbage)) {
+                return None;
+            }
+        }
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        );
+        Some(Stmt::Var(VarDecl::new(name, initializer)))
     }
 
     fn statement(&mut self) -> Option<Stmt> {
@@ -190,6 +218,8 @@ impl Parser {
             } else {
                 return Expr::Grouping(Box::new(expr));
             }
+        } else if self.is_match(&[TokenType::Identifier]) {
+            return Expr::Var(self.previous().clone())
         }
 
         self.error(self.peek().clone(), "Expect expression.");
