@@ -2,8 +2,8 @@ use crate::{Expr, Token};
 
 #[derive(Debug)]
 pub struct VarDecl {
-    name: Token,
-    initializer: Option<Expr>
+    pub name: Token,
+    pub initializer: Option<Expr>
 }
 
 impl VarDecl {

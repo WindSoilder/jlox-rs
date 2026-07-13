@@ -6,6 +6,7 @@ use std::io;
 use std::io::Read;
 use std::io::prelude::*;
 use std::iter::ExactSizeIterator;
+use std::os::linux::raw::stat;
 use std::path::Path;
 use std::process::exit;
 fn main() -> Result<()> {
@@ -60,7 +61,7 @@ fn run(source: String) -> Result<()> {
     let mut parser = Parser::new(tokens);
     let statements = parser.parse();
     // println!("{:?}", statements);
-    let interpreter = Interpreter::new();
+    let mut interpreter = Interpreter::new();
     if let Some(expr) = statements {
         let eval_result = interpreter.interpret(&expr);
         if let Err(err) = eval_result {

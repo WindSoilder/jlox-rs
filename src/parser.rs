@@ -11,7 +11,7 @@ pub struct ParseError {
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
-    parse_errors: Vec<ParseError>,
+    pub parse_errors: Vec<ParseError>,
 }
 
 impl Parser {
@@ -43,7 +43,7 @@ impl Parser {
         if result.is_none() {
             self.synchronize();
         }
-        None
+            result
     }
 
     fn var_declaration(&mut self) -> Option<Stmt> {
@@ -219,7 +219,7 @@ impl Parser {
                 return Expr::Grouping(Box::new(expr));
             }
         } else if self.is_match(&[TokenType::Identifier]) {
-            return Expr::Var(self.previous().clone())
+            return Expr::Var(self.previous().clone());
         }
 
         self.error(self.peek().clone(), "Expect expression.");
