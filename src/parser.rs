@@ -1,7 +1,7 @@
 use crate::error::error_at_token;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-use crate::{Literal, Token, TokenType, VarDecl};
+use crate::{Block, Literal, Token, TokenType, VarDecl};
 
 pub struct ParseError {
     token: Token,
@@ -65,9 +65,21 @@ impl Parser {
     fn statement(&mut self) -> Option<Stmt> {
         if self.is_match(&[TokenType::Print]) {
             self.print_statement()
-        } else {
+        } else if self.is_match(&[TokenType::LeftBrace]) {
+            Some(Stmt::Block(Block::new(self.block()?)))
+        }else{
             self.expression_statement()
         }
+    }
+
+    fn block(&mut self) -> Option<Vec<Stmt>> {
+        let mut statements = vec![];
+
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
+        Some(statements)
     }
 
     fn print_statement(&mut self) -> Option<Stmt> {

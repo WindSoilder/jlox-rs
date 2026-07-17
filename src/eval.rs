@@ -40,6 +40,9 @@ impl Interpreter {
                 }
                 self.environment.define(var_decl.name.lexeme.clone(), value);
             }
+            Stmt::Block(block) => {
+
+            }
         }
         Ok(())
     }
