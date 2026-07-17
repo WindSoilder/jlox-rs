@@ -36,12 +36,16 @@ impl Environment {
     pub fn assign(&mut self, name: &Token, value: Value) -> Result<(), JloxError> {
         if self.values.contains_key(&name.lexeme) {
             self.values.insert(name.lexeme.clone(), value);
-            Ok(())
+            return Ok(())
         } else {
-            Err(JloxError::EvalError {
-                line: name.line as u32,
-                message: format!("Undefined variable '{}'.", name.lexeme),
-            })
+            if let Some(enclosing) = &mut self.enclosing {
+                enclosing.assign(name, value)?;
+                return Ok(())
+            }
         }
+        Err(JloxError::EvalError {
+            line: name.line as u32,
+            message: format!("Undefined variable '{}'.", name.lexeme),
+        })
     }
 }
