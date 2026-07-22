@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::mem;
 
 use crate::{JloxError, Token, Value};
 
+#[derive(Default)]
 pub struct Environment {
     enclosing: Option<Box<Environment>>,
     values: HashMap<String, Value>,
@@ -31,6 +33,11 @@ impl Environment {
             line: name.line as u32,
             message: format!("Undefined variable '{}'.", name.lexeme),
         })
+    }
+
+    pub fn into_enclosing(&mut self) -> Self {
+        let result = *mem::take(&mut self.enclosing).unwrap();
+        result
     }
 
     pub fn assign(&mut self, name: &Token, value: Value) -> Result<(), JloxError> {

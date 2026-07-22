@@ -6,7 +6,6 @@ use std::io;
 use std::io::Read;
 use std::io::prelude::*;
 use std::iter::ExactSizeIterator;
-use std::os::linux::raw::stat;
 use std::path::Path;
 use std::process::exit;
 fn main() -> Result<()> {

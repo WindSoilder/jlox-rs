@@ -5,6 +5,7 @@ use crate::error::JloxError;
 use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
 use anyhow::Result;
+use std::mem;
 
 pub struct Interpreter {
     environment: Environment,
@@ -13,7 +14,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            environment: Environment::new(),
+            environment: Environment::new(None),
         }
     }
 
@@ -41,7 +42,12 @@ impl Interpreter {
                 self.environment.define(var_decl.name.lexeme.clone(), value);
             }
             Stmt::Block(block) => {
-
+                let old_env = mem::take(&mut self.environment);
+                self.environment = Environment::new(Some(Box::new(old_env)));
+                for one_stmt in &block.statements {
+                    self.execute(one_stmt)?;
+                }
+                self.environment = self.environment.into_enclosing()
             }
         }
         Ok(())
@@ -116,7 +122,7 @@ impl Interpreter {
                 let value = self.evaluate(value)?;
                 self.environment.assign(name, value.clone())?;
                 value
-            },
+            }
             Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
         };
         Ok(result)
