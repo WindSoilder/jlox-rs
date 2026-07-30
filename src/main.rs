@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use jlox_rs::{Interpreter};
+use jlox_rs::{Interpreter, Stmt};
 use jlox_rs::{Parser, Scanner};
 use std::env;
 use std::io;
@@ -45,6 +45,23 @@ fn run_prompt() -> Result<()> {
         run(line)?;
         print!("> ");
         let _ = io::stdout().flush();
+    }
+    Ok(())
+}
+
+fn run_repl(line: String) -> Result<()> {
+    let scanner = Scanner::new(line);
+    let tokens = scanner.scan_tokens();
+    let mut parser = Parser::new(tokens);
+    let statements = parser.parse();
+    let mut interpreter = Interpreter::new();
+    if let Some(expr) = statements {
+        let eval_result = interpreter.interpret_repl(&expr);
+        match eval_result {
+            Err(err) => eprintln!("Error {err:?}"),
+            Ok(Some(res)) => println!("{res}"),
+            _ => (),
+        }
     }
     Ok(())
 }

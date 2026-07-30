@@ -18,21 +18,30 @@ impl Interpreter {
         }
     }
 
+    pub fn interpret_repl(&mut self, statements: &[Stmt]) -> Result<Option<Value>> {
+        let mut result = None;
+        for one_stmt in statements {
+            result = self.execute(one_stmt)?;
+        }
+        Ok(result)
+    }
+
     pub fn interpret(&mut self, statements: &[Stmt]) -> Result<()> {
         for one_stmt in statements {
-            self.execute(one_stmt)?
+            self.execute(one_stmt)?;
         }
         Ok(())
     }
 
-    fn execute(&mut self, statement: &Stmt) -> Result<()> {
+    fn execute(&mut self, statement: &Stmt) -> Result<Option<Value>> {
+        let mut result = None;
         match statement {
             Stmt::Print(expr) => {
-                let result = self.evaluate(expr)?;
-                println!("{}", result);
+                let expr_result = self.evaluate(expr)?;
+                println!("{}", expr_result);
             }
             Stmt::Expression(expr) => {
-                self.evaluate(expr)?;
+                result = Some(self.evaluate(expr)?);
             }
             Stmt::Var(var_decl) => {
                 let mut value = Value::Null;
@@ -47,10 +56,10 @@ impl Interpreter {
                 for one_stmt in &block.statements {
                     self.execute(one_stmt)?;
                 }
-                self.environment = self.environment.into_enclosing()
+                self.environment = self.environment.into_enclosing();
             }
         }
-        Ok(())
+        Ok(result)
     }
 
     pub fn evaluate(&mut self, expr: &Expr) -> Result<Value> {
