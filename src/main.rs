@@ -1,3 +1,6 @@
+//! NOTE: lacking challenges on the chapters:
+//! II: 8 Statement and State
+//! II: 9 Control Flow
 use anyhow::{Context, Result};
 use jlox_rs::{Interpreter};
 use jlox_rs::{Parser, Scanner};

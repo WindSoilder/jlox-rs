@@ -71,9 +71,65 @@ impl Parser {
             self.if_statement()
         } else if self.is_match(&[TokenType::While]) {
             self.while_statement()
+        } else if self.is_match(&[TokenType::For]) {
+            self.for_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn for_statement(&mut self) -> Option<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+        let initializer = if self.is_match(&[TokenType::Semicolon]) {
+            None
+        } else if self.is_match(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.expression_statement()
+        };
+
+        let mut condition = if self.check(TokenType::Semicolon) {
+            None
+        } else {
+            let repr = self.expression();
+            if repr.is_garbage() {
+                return None;
+            }
+            Some(repr)
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let mut incr = if self.check(TokenType::RightParen) {
+            None
+        } else {
+            let repr = self.expression();
+            if repr.is_garbage() {
+                return None;
+            }
+            Some(repr)
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+        if incr.is_some() {
+            let incr = incr.expect("already check exists");
+            body = Stmt::Block(Block::new(vec![body, Stmt::Expression(incr)]));
+        }
+
+        if condition.is_none() {
+            condition = Some(Expr::Literal(Literal::Bool(true)));
+        }
+        body = Stmt::While(While::new(
+            condition.expect("the incremental should always contains something"),
+            Box::new(body),
+        ));
+
+        if initializer.is_some() {
+            let initializer = initializer.expect("already check exists");
+            body = Stmt::Block(Block::new(vec![initializer, body]));
+        }
+        Some(body)
     }
 
     fn while_statement(&mut self) -> Option<Stmt> {
