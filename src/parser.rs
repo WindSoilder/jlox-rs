@@ -1,7 +1,7 @@
 use crate::error::error_at_token;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-use crate::{Block, Literal, Token, TokenType, VarDecl};
+use crate::{Block, If, Literal, Token, TokenType, VarDecl};
 
 pub struct ParseError {
     token: Token,
@@ -43,7 +43,7 @@ impl Parser {
         if result.is_none() {
             self.synchronize();
         }
-            result
+        result
     }
 
     fn var_declaration(&mut self) -> Option<Stmt> {
@@ -67,9 +67,31 @@ impl Parser {
             self.print_statement()
         } else if self.is_match(&[TokenType::LeftBrace]) {
             Some(Stmt::Block(Block::new(self.block()?)))
-        }else{
+        } else if self.is_match(&[TokenType::If]) {
+            self.if_statement()
+        } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&mut self) -> Option<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression();
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+
+        let then_branch = self.statement()?;
+
+        let else_branch = if self.is_match(&[TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+
+        Some(Stmt::If(If::new(
+            condition,
+            Box::new(then_branch),
+            else_branch,
+        )))
     }
 
     fn block(&mut self) -> Option<Vec<Stmt>> {
@@ -117,13 +139,12 @@ impl Parser {
             let value = self.assignment();
 
             if let Expr::Var(token) = expr {
-                return Expr::Assignment((token, Box::new(value)))
+                return Expr::Assignment((token, Box::new(value)));
             }
             self.error(equals, "Invalid assignment target.");
             return Expr::Garbage;
         }
         expr
-
     }
 
     fn equality(&mut self) -> Expr {

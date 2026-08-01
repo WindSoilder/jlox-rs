@@ -24,8 +24,26 @@ impl Block {
 }
 
 #[derive(Debug)]
+pub struct If {
+    pub condition: Expr,
+    pub then_branch: Box<Stmt>,
+    pub else_branch: Option<Box<Stmt>>,
+}
+
+impl If {
+    pub fn new(condition: Expr, then_branch: Box<Stmt>, else_branch: Option<Box<Stmt>>) -> Self {
+        Self {
+            condition,
+            then_branch,
+            else_branch,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Stmt {
     Expression(Expr),
+    If(If),
     Print(Expr),
     Var(VarDecl),
     Block(Block),

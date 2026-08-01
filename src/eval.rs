@@ -49,6 +49,18 @@ impl Interpreter {
                 }
                 self.environment = self.environment.into_enclosing()
             }
+            Stmt::If(if_stmt) => {
+                if is_truthy(&self.evaluate(&if_stmt.condition)?) {
+                    self.execute(&if_stmt.then_branch)?;
+                } else {
+                    match &if_stmt.else_branch {
+                        None => (),
+                        Some(else_branch) => {
+                            self.execute(else_branch)?;
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }

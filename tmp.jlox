@@ -28,3 +28,9 @@ var c = "global c";
 print a;
 print b;
 print c;
+
+var a = 1;
+{
+    var a = a + 2;
+    print a;
+}
