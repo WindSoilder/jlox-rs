@@ -135,6 +135,20 @@ impl Interpreter {
                 self.environment.assign(name, value.clone())?;
                 value
             }
+            Expr::Logical((left, op, right)) => {
+                let left = self.evaluate(left)?;
+
+                if op.token_type == TokenType::Or {
+                    if is_truthy(&left) {
+                        return Ok(left);
+                    }
+                } else {
+                    if !is_truthy(&left) {
+                        return Ok(left);
+                    }
+                }
+                self.evaluate(right)?
+            }
             Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
         };
         Ok(result)
