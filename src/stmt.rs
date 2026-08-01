@@ -41,9 +41,22 @@ impl If {
 }
 
 #[derive(Debug)]
+pub struct While {
+    pub condition: Expr,
+    pub body: Box<Stmt>,
+}
+
+impl While {
+    pub fn new(condition: Expr, body: Box<Stmt>) -> Self {
+        Self {condition, body }
+    }
+}
+
+#[derive(Debug)]
 pub enum Stmt {
     Expression(Expr),
     If(If),
+    While(While),
     Print(Expr),
     Var(VarDecl),
     Block(Block),

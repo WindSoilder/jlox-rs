@@ -10,3 +10,9 @@ pub enum Expr {
     Var(Token),
     Garbage,
 }
+
+impl Expr {
+    pub fn is_garbage(&self) -> bool {
+        matches!(self, Expr::Garbage)
+    }
+}

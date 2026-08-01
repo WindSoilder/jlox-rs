@@ -61,6 +61,11 @@ impl Interpreter {
                     }
                 }
             }
+            Stmt::While(while_stmt) => {
+                while is_truthy(&self.evaluate(&while_stmt.condition)?) {
+                    self.execute(&while_stmt.body)?;
+                }
+            }
         }
         Ok(())
     }

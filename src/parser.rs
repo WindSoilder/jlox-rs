@@ -1,7 +1,7 @@
 use crate::error::error_at_token;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-use crate::{Block, If, Literal, Token, TokenType, VarDecl};
+use crate::{Block, If, Literal, Token, TokenType, VarDecl, While};
 
 pub struct ParseError {
     token: Token,
@@ -69,15 +69,31 @@ impl Parser {
             Some(Stmt::Block(Block::new(self.block()?)))
         } else if self.is_match(&[TokenType::If]) {
             self.if_statement()
+        } else if self.is_match(&[TokenType::While]) {
+            self.while_statement()
         } else {
             self.expression_statement()
         }
     }
 
+    fn while_statement(&mut self) -> Option<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'");
+        let condition = self.expression();
+        if condition.is_garbage() {
+            return None;
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after condition");
+        let body = self.statement()?;
+        Some(Stmt::While(While::new(condition, Box::new(body))))
+    }
+
     fn if_statement(&mut self) -> Option<Stmt> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
         let condition = self.expression();
-        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+        if condition.is_garbage() {
+            return None;
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
 
         let then_branch = self.statement()?;
 
