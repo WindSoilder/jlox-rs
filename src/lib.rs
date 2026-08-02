@@ -5,6 +5,7 @@ mod eval;
 mod expr;
 mod stmt;
 mod environment;
+mod callable;
 
 pub use error::*;
 pub use parser::*;
@@ -13,3 +14,4 @@ pub use eval::*;
 pub use expr::*;
 pub use stmt::*;
 pub use environment::*;
+pub use callable::Callable;

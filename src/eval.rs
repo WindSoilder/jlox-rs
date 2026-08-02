@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::TokenType;
+use crate::callable::{Callable, Clock};
 use crate::error::JloxError;
 use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
@@ -13,6 +14,8 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
+        let mut global = Environment::new(None);
+        global.define("clock".to_string(), Value::Callable(Box::new(Clock)));
         Self {
             environment: Environment::new(None),
         }
@@ -154,18 +157,67 @@ impl Interpreter {
                 }
                 self.evaluate(right)?
             }
+            Expr::Call((callee, paren, arguments)) => {
+                let callee = self.evaluate(callee)?;
+                if arguments.len() != callee.arity() {
+                    return Err(eval_error(
+                        paren.line,
+                        format!(
+                            "Expected {} arguments but got {}.",
+                            callee.arity(),
+                            arguments.len()
+                        ),
+                    ));
+                }
+
+                let mut args = vec![];
+                for arg in arguments {
+                    args.push(self.evaluate(arg)?);
+                }
+
+                callee.call(self, args)?
+            }
             Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
         };
         Ok(result)
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum Value {
     String(String),
     Null,
     Number(f64),
     Bool(bool),
+    // FIXME: it's not good.  Need to store callable id.
+    Callable(Box<dyn Callable>),
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        use Value::*;
+        match (self, other) {
+            (String(a), String(b)) => a == b,
+            (Null, Null) => true,
+            (Number(a), Number(b)) => a == b,
+            (Bool(a), Bool(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Value {
+    fn call(self, _interpreter: &mut Interpreter, _args: Vec<Value>) -> Result<Value> {
+        todo!();
+    }
+
+    fn arity(&self) -> usize {
+        todo!()
+    }
+
+    fn is_callable(&self) -> bool {
+        matches!(self, Value::Callable(_))
+    }
 }
 
 impl Display for Value {
@@ -175,6 +227,7 @@ impl Display for Value {
             Value::Null => write!(f, "nil"),
             Value::Number(n) => write!(f, "{n}"),
             Value::Bool(b) => write!(f, "{b}"),
+            Value::Callable(c) => write!(f, "{}", c.to_string()),
         }
     }
 }

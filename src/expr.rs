@@ -3,6 +3,11 @@ use crate::{Literal, Token};
 pub enum Expr {
     Binary((Box<Expr>, Token, Box<Expr>)),
     Logical((Box<Expr>, Token, Box<Expr>)),
+    /// callee, paren, arguments
+    /// it stores the token for the closing parenthesis, we'll
+    /// use that token's location when we report a runtime error caused by
+    /// a function call.
+    Call((Box<Expr>, Token, Vec<Expr>)),
     Assignment((Token, Box<Expr>)),
     Grouping(Box<Expr>),
     Literal(Literal),
