@@ -1,3 +1,4 @@
+use crate::callable::{self, Callable, CallableId};
 use std::collections::HashMap;
 use std::mem;
 
@@ -16,9 +17,12 @@ impl Environment {
             values: HashMap::new(),
         }
     }
+
     pub fn define(&mut self, name: String, value: Value) {
         self.values.insert(name, value);
     }
+
+    
 
     pub fn get(&self, name: &Token) -> Result<&Value, JloxError> {
         match self.values.get(&name.lexeme) {
@@ -43,11 +47,11 @@ impl Environment {
     pub fn assign(&mut self, name: &Token, value: Value) -> Result<(), JloxError> {
         if self.values.contains_key(&name.lexeme) {
             self.values.insert(name.lexeme.clone(), value);
-            return Ok(())
+            return Ok(());
         } else {
             if let Some(enclosing) = &mut self.enclosing {
                 enclosing.assign(name, value)?;
-                return Ok(())
+                return Ok(());
             }
         }
         Err(JloxError::EvalError {

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::TokenType;
-use crate::callable::{Callable, Clock};
+use crate::callable::{Callable, CallableId, Clock};
 use crate::error::JloxError;
 use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
@@ -9,14 +9,22 @@ use anyhow::Result;
 use std::mem;
 
 pub struct Interpreter {
+    callables: Vec<Box<dyn Callable>>,
     environment: Environment,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         let mut global = Environment::new(None);
-        global.define("clock".to_string(), Value::Callable(Box::new(Clock)));
+        let mut callables = vec![];
+        define_callable(
+            "clock".to_string(),
+            Box::new(Clock),
+            &mut callables,
+            &mut global,
+        );
         Self {
+            callables,
             environment: Environment::new(None),
         }
     }
@@ -189,8 +197,7 @@ pub enum Value {
     Null,
     Number(f64),
     Bool(bool),
-    // FIXME: it's not good.  Need to store callable id.
-    Callable(Box<dyn Callable>),
+    Callable(CallableId),
 }
 
 impl PartialEq for Value {
@@ -227,7 +234,7 @@ impl Display for Value {
             Value::Null => write!(f, "nil"),
             Value::Number(n) => write!(f, "{n}"),
             Value::Bool(b) => write!(f, "{b}"),
-            Value::Callable(c) => write!(f, "{}", c.to_string()),
+            Value::Callable(c) => write!(f, "callable func"),
         }
     }
 }
@@ -246,4 +253,15 @@ fn eval_error(line: usize, message: impl Into<String>) -> anyhow::Error {
         message: message.into(),
     }
     .into()
+}
+
+fn define_callable(
+    name: String,
+    callable: Box<dyn Callable>,
+    result: &mut Vec<Box<dyn Callable>>,
+    env: &mut Environment,
+) {
+    result.push(callable);
+    let callable_id = CallableId(result.len() - 1);
+    env.define(name, Value::Callable(callable_id));
 }

@@ -1,8 +1,11 @@
 use crate::{Interpreter, Value};
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::fmt::Debug;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-pub trait Callable: Debug + Clone {
+#[derive(Debug, Clone, Copy)]
+pub struct CallableId(pub usize);
+
+pub trait Callable: Debug {
     fn arity(&self) -> usize {
         return 0;
     }
