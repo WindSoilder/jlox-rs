@@ -1,7 +1,7 @@
 use crate::error::error_at_token;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-use crate::{Block, If, Literal, Token, TokenType, VarDecl, While};
+use crate::{Block, FuncDecl, If, Literal, Token, TokenType, VarDecl, While};
 
 pub struct ParseError {
     token: Token,
@@ -37,6 +37,8 @@ impl Parser {
     fn declaration(&mut self) -> Option<Stmt> {
         let result = if self.is_match(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.is_match(&[TokenType::Fun]) {
+            self.function("function")
         } else {
             self.statement()
         };
@@ -44,6 +46,36 @@ impl Parser {
             self.synchronize();
         }
         result
+    }
+
+    fn function(&mut self, kind: &str) -> Option<Stmt> {
+        let name = self.consume(TokenType::Identifier, &format!("Expect {kind} name"))?;
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {kind} name"),
+        )?;
+        let mut parameters = vec![];
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if parameters.len() >= 255 {
+                    error_at_token(self.peek(), "Can't have more than 255 parameters.");
+                }
+
+                parameters.push(self.consume(TokenType::Identifier, "Epxect parameter name.")?);
+
+                if !self.is_match(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after paremters.")?;
+
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '{{' before {kind} body."),
+        )?;
+        let body = self.block()?;
+        Some(Stmt::Func(FuncDecl::new(name, parameters, body)))
     }
 
     fn var_declaration(&mut self) -> Option<Stmt> {

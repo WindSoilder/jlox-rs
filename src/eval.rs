@@ -9,8 +9,8 @@ use anyhow::Result;
 use std::mem;
 
 pub struct Interpreter {
-    callables: Vec<Box<dyn Callable>>,
-    environment: Environment,
+    pub callables: Vec<Box<dyn Callable>>,
+    pub environment: Environment,
 }
 
 impl Interpreter {
@@ -36,7 +36,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute(&mut self, statement: &Stmt) -> Result<()> {
+    pub fn execute(&mut self, statement: &Stmt) -> Result<()> {
         match statement {
             Stmt::Print(expr) => {
                 let result = self.evaluate(expr)?;
@@ -76,6 +76,17 @@ impl Interpreter {
                 while is_truthy(&self.evaluate(&while_stmt.condition)?) {
                     self.execute(&while_stmt.body)?;
                 }
+            }
+            Stmt::Func(func_decl) => {
+                let callables = &mut self.callables;
+                let env = &self.environment;
+                
+                define_callable(
+                    "clock".to_string(),
+                    Box::new(Clock),
+                    callables,
+                    env,
+                );
             }
         }
         Ok(())
@@ -234,6 +245,7 @@ impl Display for Value {
             Value::Null => write!(f, "nil"),
             Value::Number(n) => write!(f, "{n}"),
             Value::Bool(b) => write!(f, "{b}"),
+            // FIXME: oops, failed to get function name.
             Value::Callable(c) => write!(f, "callable func"),
         }
     }

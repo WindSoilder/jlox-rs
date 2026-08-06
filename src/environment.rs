@@ -22,8 +22,6 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    
-
     pub fn get(&self, name: &Token) -> Result<&Value, JloxError> {
         match self.values.get(&name.lexeme) {
             Some(val) => return Ok(val),

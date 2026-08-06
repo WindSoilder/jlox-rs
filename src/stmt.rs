@@ -53,11 +53,25 @@ impl While {
 }
 
 #[derive(Debug)]
+pub struct FuncDecl {
+    pub name: Token,
+    pub params: Vec<Token>,
+    pub body: Vec<Stmt>,
+}
+
+impl FuncDecl {
+    pub fn new(name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Self {
+        Self {name, params, body}
+    }
+}
+
+#[derive(Debug)]
 pub enum Stmt {
     Expression(Expr),
     If(If),
     While(While),
     Print(Expr),
     Var(VarDecl),
+    Func(FuncDecl),
     Block(Block),
 }
