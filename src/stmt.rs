@@ -1,6 +1,6 @@
 use crate::{Expr, Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VarDecl {
     pub name: Token,
     pub initializer: Option<Expr>,
@@ -12,7 +12,7 @@ impl VarDecl {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     pub statements: Vec<Stmt>,
 }
@@ -23,7 +23,7 @@ impl Block {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct If {
     pub condition: Expr,
     pub then_branch: Box<Stmt>,
@@ -40,7 +40,7 @@ impl If {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct While {
     pub condition: Expr,
     pub body: Box<Stmt>,
@@ -52,7 +52,7 @@ impl While {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FuncDecl {
     pub name: Token,
     pub params: Vec<Token>,
@@ -65,7 +65,7 @@ impl FuncDecl {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Expression(Expr),
     If(If),

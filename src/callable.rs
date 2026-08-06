@@ -2,6 +2,7 @@ use crate::{Environment, FuncDecl, Interpreter, Value};
 use anyhow::Result;
 use std::fmt::Debug;
 use std::mem;
+use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Copy)]
@@ -36,11 +37,25 @@ pub trait Callable: Debug {
 
     fn to_string(&self) -> String {
         let decl = self.get_decl();
-        decl.map_or_else(|| "<native fn>".to_string(), |d| format!("<fn {} >", d.name.lexeme))
+        decl.map_or_else(
+            || "<native fn>".to_string(),
+            |d| format!("<fn {} >", d.name.lexeme),
+        )
     }
 
-    fn get_decl(&self) -> Option<FuncDecl> {
+    fn get_decl(&self) -> Option<&Rc<FuncDecl>> {
         None
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CustomCallable {
+    pub decl: Rc<FuncDecl>,
+}
+
+impl Callable for CustomCallable {
+    fn get_decl(&self) -> Option<&Rc<FuncDecl>> {
+        Some(&self.decl)
     }
 }
 

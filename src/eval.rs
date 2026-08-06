@@ -1,7 +1,8 @@
 use std::fmt::Display;
+use std::rc::Rc;
 
 use crate::TokenType;
-use crate::callable::{Callable, CallableId, Clock};
+use crate::callable::{Callable, CallableId, Clock, CustomCallable};
 use crate::error::JloxError;
 use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
@@ -80,13 +81,11 @@ impl Interpreter {
             Stmt::Func(func_decl) => {
                 let callables = &mut self.callables;
                 let env = &self.environment;
-                
-                define_callable(
-                    "clock".to_string(),
-                    Box::new(Clock),
-                    callables,
-                    env,
-                );
+                let new_func = CustomCallable {
+                    decl: Rc::new(func_decl.clone()),
+                };
+
+                define_callable("clock".to_string(), Box::new(Clock), callables, env);
             }
         }
         Ok(())
