@@ -12,7 +12,7 @@ static KEYWORDS: LazyLock<HashMap<String, TokenType>> = LazyLock::new(|| {
     keywords.insert("else".to_string(), Else);
     keywords.insert("false".to_string(), False);
     keywords.insert("for".to_string(), For);
-    keywords.insert("fun".to_string(), Fun);
+    keywords.insert("def".to_string(), Def);
     keywords.insert("if".to_string(), If);
     keywords.insert("nil".to_string(), Nil);
     keywords.insert("or".to_string(), Or);
@@ -309,7 +309,7 @@ pub enum TokenType {
     Identifier, String, Number,
 
     // Keywords.
-    And, Class, Else, False, Fun, For, If, Nil, Or,
+    And, Class, Else, False, Def, For, If, Nil, Or,
     Print, Return, Super, This, True, Var, While,
 
     Eof

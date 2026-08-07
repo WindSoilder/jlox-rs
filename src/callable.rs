@@ -13,7 +13,7 @@ pub trait Callable: Debug {
         self.get_decl().map(|decl| decl.params.len()).unwrap_or(0)
     }
 
-    fn call(&mut self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value> {
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value> {
         let decl = self.get_decl();
         if decl.is_none() {
             panic!(
@@ -43,18 +43,18 @@ pub trait Callable: Debug {
         )
     }
 
-    fn get_decl(&self) -> Option<&Rc<FuncDecl>> {
+    fn get_decl(&self) -> Option<&FuncDecl> {
         None
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CustomCallable {
-    pub decl: Rc<FuncDecl>,
+    pub decl: FuncDecl,
 }
 
 impl Callable for CustomCallable {
-    fn get_decl(&self) -> Option<&Rc<FuncDecl>> {
+    fn get_decl(&self) -> Option<&FuncDecl> {
         Some(&self.decl)
     }
 }
@@ -63,7 +63,7 @@ impl Callable for CustomCallable {
 pub struct Clock;
 
 impl Callable for Clock {
-    fn call(&mut self, _interpreter: &mut Interpreter, _arguments: Vec<Value>) -> Result<Value> {
+    fn call(&self, _interpreter: &mut Interpreter, _arguments: Vec<Value>) -> Result<Value> {
         let t = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()

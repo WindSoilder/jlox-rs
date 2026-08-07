@@ -37,7 +37,7 @@ impl Parser {
     fn declaration(&mut self) -> Option<Stmt> {
         let result = if self.is_match(&[TokenType::Var]) {
             self.var_declaration()
-        } else if self.is_match(&[TokenType::Fun]) {
+        } else if self.is_match(&[TokenType::Def]) {
             self.function("function")
         } else {
             self.statement()
@@ -71,7 +71,7 @@ impl Parser {
         self.consume(TokenType::RightParen, "Expect ')' after paremters.")?;
 
         self.consume(
-            TokenType::LeftParen,
+            TokenType::LeftBrace,
             &format!("Expect '{{' before {kind} body."),
         )?;
         let body = self.block()?;
@@ -468,7 +468,7 @@ impl Parser {
 
             match self.peek().token_type {
                 TokenType::Class
-                | TokenType::Fun
+                | TokenType::Def
                 | TokenType::Var
                 | TokenType::For
                 | TokenType::If

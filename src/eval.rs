@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::rc::Rc;
 
 use crate::TokenType;
 use crate::callable::{Callable, CallableId, Clock, CustomCallable};
@@ -8,9 +7,10 @@ use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
 use anyhow::Result;
 use std::mem;
+use std::sync::Arc;
 
 pub struct Interpreter {
-    pub callables: Vec<Box<dyn Callable>>,
+    pub callables: Vec<std::sync::Arc<dyn Callable>>,
     pub environment: Environment,
 }
 
@@ -20,7 +20,7 @@ impl Interpreter {
         let mut callables = vec![];
         define_callable(
             "clock".to_string(),
-            Box::new(Clock),
+            Arc::new(Clock),
             &mut callables,
             &mut global,
         );
@@ -80,12 +80,17 @@ impl Interpreter {
             }
             Stmt::Func(func_decl) => {
                 let callables = &mut self.callables;
-                let env = &self.environment;
+                let env = &mut self.environment;
                 let new_func = CustomCallable {
-                    decl: Rc::new(func_decl.clone()),
+                    decl: func_decl.clone(),
                 };
 
-                define_callable("clock".to_string(), Box::new(Clock), callables, env);
+                define_callable(
+                    func_decl.name.lexeme.clone(),
+                    Arc::new(new_func),
+                    callables,
+                    env,
+                );
             }
         }
         Ok(())
@@ -177,12 +182,19 @@ impl Interpreter {
             }
             Expr::Call((callee, paren, arguments)) => {
                 let callee = self.evaluate(callee)?;
-                if arguments.len() != callee.arity() {
+                // make sure that it's callable.
+                if matches!(callee, Value::Callable(_)) == false {
+                    return Err(eval_error(
+                        paren.line,
+                        "Can only call functions and classes.",
+                    ));
+                }
+                if arguments.len() != callee.arity(self) {
                     return Err(eval_error(
                         paren.line,
                         format!(
                             "Expected {} arguments but got {}.",
-                            callee.arity(),
+                            callee.arity(self),
                             arguments.len()
                         ),
                     ));
@@ -224,12 +236,22 @@ impl PartialEq for Value {
 }
 
 impl Value {
-    fn call(self, _interpreter: &mut Interpreter, _args: Vec<Value>) -> Result<Value> {
-        todo!();
+    fn call(self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value> {
+        if let Value::Callable(call_id) = self {
+            let callable = interpreter.callables[call_id.0].clone();
+            callable.call(interpreter, args)
+        } else {
+            panic!("should make sure that the value is callable")
+        }
     }
 
-    fn arity(&self) -> usize {
-        todo!()
+    fn arity(&self, interpreter: &Interpreter) -> usize {
+        if let Value::Callable(call_id) = self {
+            let callable = &interpreter.callables[call_id.0];
+            callable.arity()
+        } else {
+            panic!("should make sure that the value is callable")
+        }
     }
 
     fn is_callable(&self) -> bool {
@@ -268,8 +290,8 @@ fn eval_error(line: usize, message: impl Into<String>) -> anyhow::Error {
 
 fn define_callable(
     name: String,
-    callable: Box<dyn Callable>,
-    result: &mut Vec<Box<dyn Callable>>,
+    callable: Arc<dyn Callable>,
+    result: &mut Vec<Arc<dyn Callable>>,
     env: &mut Environment,
 ) {
     result.push(callable);
