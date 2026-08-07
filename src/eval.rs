@@ -92,6 +92,13 @@ impl Interpreter {
                     env,
                 );
             }
+            Stmt::Return(return_exp) => {
+                let val = match &return_exp.value {
+                    None => Value::Null,
+                    Some(val) => self.evaluate(val)?,
+                };
+                return Err(return_val(val));
+            }
         }
         Ok(())
     }
@@ -222,6 +229,12 @@ pub enum Value {
     Callable(CallableId),
 }
 
+impl Default for Value {
+    fn default() -> Self {
+        Value::Null
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
@@ -239,7 +252,15 @@ impl Value {
     fn call(self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value> {
         if let Value::Callable(call_id) = self {
             let callable = interpreter.callables[call_id.0].clone();
-            callable.call(interpreter, args)
+            match callable.call(interpreter, args) {
+                Err(mut e) => match e.downcast_mut::<JloxError>() {
+                    Some(JloxError::Return { val }) => Ok(mem::take(val)),
+                    None => return Err(e),
+                    Some(_) => return Err(e),
+
+                },
+                Ok(_) => Ok(Value::Null),
+            }
         } else {
             panic!("should make sure that the value is callable")
         }
@@ -286,6 +307,10 @@ fn eval_error(line: usize, message: impl Into<String>) -> anyhow::Error {
         message: message.into(),
     }
     .into()
+}
+
+fn return_val(val: Value) -> anyhow::Error {
+    JloxError::Return { val }.into()
 }
 
 fn define_callable(

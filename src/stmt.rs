@@ -48,7 +48,7 @@ pub struct While {
 
 impl While {
     pub fn new(condition: Expr, body: Box<Stmt>) -> Self {
-        Self {condition, body }
+        Self { condition, body }
     }
 }
 
@@ -61,8 +61,14 @@ pub struct FuncDecl {
 
 impl FuncDecl {
     pub fn new(name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Self {
-        Self {name, params, body}
+        Self { name, params, body }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Return {
+    pub keyword: Token,
+    pub value: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,4 +80,5 @@ pub enum Stmt {
     Var(VarDecl),
     Func(FuncDecl),
     Block(Block),
+    Return(Return),
 }

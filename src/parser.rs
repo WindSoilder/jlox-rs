@@ -1,7 +1,7 @@
 use crate::error::error_at_token;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
-use crate::{Block, FuncDecl, If, Literal, Token, TokenType, VarDecl, While};
+use crate::{Block, FuncDecl, If, Literal, Return, Token, TokenType, VarDecl, While};
 
 pub struct ParseError {
     token: Token,
@@ -105,9 +105,25 @@ impl Parser {
             self.while_statement()
         } else if self.is_match(&[TokenType::For]) {
             self.for_statement()
+        } else if self.is_match(&[TokenType::Return]) {
+            self.return_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn return_statement(&mut self) -> Option<Stmt> {
+        let keyword = self.previous().clone();
+
+        let mut value = None;
+        if !self.check(TokenType::Semicolon) {
+            let ret_val = self.expression();
+            if ret_val.is_garbage() {
+                return None;
+            }
+            value = Some(ret_val)
+        }
+        Some(Stmt::Return(Return { keyword, value }))
     }
 
     fn for_statement(&mut self) -> Option<Stmt> {
