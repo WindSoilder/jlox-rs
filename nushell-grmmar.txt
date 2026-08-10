@@ -47,7 +47,7 @@ mut_decl       → "mut" binding "=" pipeline ;
 const_decl     → "const" binding "=" pipeline ;
 binding        → IDENTIFIER type_annotation? ;
 
-def_decl       → "def" def_option* command_name signature io_signature? block_literal ;
+def_decl       → "fun" def_option* command_name signature io_signature? block_literal ;
 extern_decl    → "extern" command_name signature ;
 def_option     → "--env" | "--wrapped" ;
 io_signature   → ":" "[" type "->" type "]" ;

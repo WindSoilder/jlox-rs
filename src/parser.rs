@@ -37,7 +37,7 @@ impl Parser {
     fn declaration(&mut self) -> Option<Stmt> {
         let result = if self.is_match(&[TokenType::Var]) {
             self.var_declaration()
-        } else if self.is_match(&[TokenType::Def]) {
+        } else if self.is_match(&[TokenType::Fun]) {
             self.function("function")
         } else {
             self.statement()
@@ -123,6 +123,7 @@ impl Parser {
             }
             value = Some(ret_val)
         }
+        self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
         Some(Stmt::Return(Return { keyword, value }))
     }
 
@@ -484,7 +485,7 @@ impl Parser {
 
             match self.peek().token_type {
                 TokenType::Class
-                | TokenType::Def
+                | TokenType::Fun
                 | TokenType::Var
                 | TokenType::For
                 | TokenType::If

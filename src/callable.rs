@@ -29,7 +29,13 @@ pub trait Callable: Debug {
                 .define(one_param.lexeme.clone(), one_arg)
         }
         for one_stmt in &decl.body {
-            interpreter.execute(one_stmt)?;
+            match interpreter.execute(one_stmt) {
+                Ok(_) => {}
+                Err(e) => {
+                    interpreter.environment = interpreter.environment.into_enclosing();
+                    return Err(e);
+                }
+            }
         }
         interpreter.environment = interpreter.environment.into_enclosing();
         Ok(Value::Null)
