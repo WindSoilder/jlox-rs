@@ -1,3 +1,65 @@
+print "one";
+print true;
+print 2 + 1;
+
+var a = 1;
+var b = 2;
+print a + b;
+
+print b = "100861111";
+
+
+var a = "global a";
+var b = "global b";
+var c = "global c";
+{
+  var a = "outer a";
+  var b = "outer b";
+  {
+    var a = "inner a";
+    print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
+}
+print a;
+print b;
+print c;
+
+var a = 1;
+{
+    var a = a + 2;
+    print a;
+}
+
+var a = 0;
+var temp;
+
+for (var b = 1; a < 10000; b = temp + b) {
+  print a;
+  temp = a;
+  a = b;
+}
+
+
+fun say_hi(first, last) {
+    print "Hi, " + first + " " + last + "!";
+}
+
+say_hi("Dear", "Reader");
+
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+
+for (var i = 0; i < 20; i = i + 1) {
+  print fib(i);
+}
+
 fun makeCounter() {
   var i = 0;
   fun count() {

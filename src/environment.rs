@@ -1,8 +1,6 @@
-use crate::callable::{self, Callable, CallableId};
 use std::collections::HashMap;
 use std::mem;
 use std::rc::Rc;
-use std::cell::Ref;
 use std::cell::RefCell;
 
 use crate::{JloxError, Token, Value};
@@ -32,7 +30,7 @@ impl Environment {
             None => {
                 if let Some(enclosing) = &self.enclosing {
                     let x = enclosing.borrow();
-                    return x.get(name).map(|v| v.clone());
+                    return x.get(name);
                 }
             }
         }

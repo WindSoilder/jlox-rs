@@ -24,10 +24,8 @@ pub trait Callable: Debug {
         let decl = decl.unwrap();
 
         let old_env = mem::take(&mut interpreter.environment);
-        match self.get_closure() {
-            Some(closure) => interpreter.environment = closure,
-            None => interpreter.environment = old_env.clone(),
-        }
+        let closure = self.get_closure().unwrap_or_else(|| old_env.clone());
+        interpreter.environment = Rc::new(RefCell::new(Environment::new(Some(closure))));
         for (one_param, one_arg) in decl.params.iter().zip(arguments) {
             interpreter
                 .environment
@@ -38,17 +36,12 @@ pub trait Callable: Debug {
             match interpreter.execute(one_stmt) {
                 Ok(_) => {}
                 Err(e) => {
-                    // let inner = interpreter.environment.borrow_mut().into_enclosing();
-                    // interpreter.environment = inner;
                     interpreter.environment = old_env;
                     return Err(e);
                 }
             }
         }
-        // FIXME: there is an issue about running the jlox file
-        let inner = interpreter.environment.borrow_mut().into_enclosing();
-        interpreter.environment = inner;
-        // interpreter.environment = old_env;
+        interpreter.environment = old_env;
         Ok(Value::Null)
     }
 
