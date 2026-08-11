@@ -6,17 +6,19 @@ use crate::error::JloxError;
 use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
 use anyhow::Result;
+use std::cell::RefCell;
 use std::mem;
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub struct Interpreter {
     pub callables: Vec<std::sync::Arc<dyn Callable>>,
-    pub environment: Environment,
+    pub environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut global = Environment::new(None);
+        let mut global = Rc::new(RefCell::new(Environment::new(None)));
         let mut callables = vec![];
         define_callable(
             "clock".to_string(),
@@ -26,7 +28,7 @@ impl Interpreter {
         );
         Self {
             callables,
-            environment: Environment::new(None),
+            environment: global,
         }
     }
 
@@ -51,15 +53,16 @@ impl Interpreter {
                 if let Some(init_val) = &var_decl.initializer {
                     value = self.evaluate(init_val)?;
                 }
-                self.environment.define(var_decl.name.lexeme.clone(), value);
+                self.environment.borrow_mut().define(var_decl.name.lexeme.clone(), value);
             }
             Stmt::Block(block) => {
-                let old_env = mem::take(&mut self.environment);
-                self.environment = Environment::new(Some(Box::new(old_env)));
+                let old_env = self.environment.clone();
+                self.environment = Rc::new(RefCell::new(Environment::new(Some(old_env))));
                 for one_stmt in &block.statements {
                     self.execute(one_stmt)?;
                 }
-                self.environment = self.environment.into_enclosing()
+                let enclosing = self.environment.borrow_mut().into_enclosing();
+                self.environment = enclosing;
             }
             Stmt::If(if_stmt) => {
                 if is_truthy(&self.evaluate(&if_stmt.condition)?) {
@@ -80,11 +83,12 @@ impl Interpreter {
             }
             Stmt::Func(func_decl) => {
                 let callables = &mut self.callables;
-                let env = &mut self.environment;
                 let new_func = CustomCallable {
+                    closure: self.environment.clone(),
                     decl: func_decl.clone(),
                 };
 
+                let env = &mut self.environment;
                 define_callable(
                     func_decl.name.lexeme.clone(),
                     Arc::new(new_func),
@@ -167,10 +171,10 @@ impl Interpreter {
                 };
                 result
             }
-            Expr::Var(token) => self.environment.get(token)?.clone(),
+            Expr::Var(token) => self.environment.borrow().get(token)?,
             Expr::Assignment((name, value)) => {
                 let value = self.evaluate(value)?;
-                self.environment.assign(name, value.clone())?;
+                self.environment.borrow_mut().assign(name, value.clone())?;
                 value
             }
             Expr::Logical((left, op, right)) => {
@@ -257,7 +261,6 @@ impl Value {
                     Some(JloxError::Return { val }) => Ok(mem::take(val)),
                     None => return Err(e),
                     Some(_) => return Err(e),
-
                 },
                 Ok(_) => Ok(Value::Null),
             }
@@ -317,9 +320,9 @@ fn define_callable(
     name: String,
     callable: Arc<dyn Callable>,
     result: &mut Vec<Arc<dyn Callable>>,
-    env: &mut Environment,
+    env: &mut Rc<RefCell<Environment>>,
 ) {
     result.push(callable);
     let callable_id = CallableId(result.len() - 1);
-    env.define(name, Value::Callable(callable_id));
+    env.borrow_mut().define(name, Value::Callable(callable_id));
 }

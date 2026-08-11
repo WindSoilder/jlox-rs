@@ -1,5 +1,6 @@
 use crate::{Environment, FuncDecl, Interpreter, Value};
 use anyhow::Result;
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::mem;
 use std::rc::Rc;
@@ -21,23 +22,33 @@ pub trait Callable: Debug {
             );
         }
         let decl = decl.unwrap();
+
         let old_env = mem::take(&mut interpreter.environment);
-        interpreter.environment = Environment::new(Some(Box::new(old_env)));
+        match self.get_closure() {
+            Some(closure) => interpreter.environment = closure,
+            None => interpreter.environment = old_env.clone(),
+        }
         for (one_param, one_arg) in decl.params.iter().zip(arguments) {
             interpreter
                 .environment
+                .borrow_mut()
                 .define(one_param.lexeme.clone(), one_arg)
         }
         for one_stmt in &decl.body {
             match interpreter.execute(one_stmt) {
                 Ok(_) => {}
                 Err(e) => {
-                    interpreter.environment = interpreter.environment.into_enclosing();
+                    // let inner = interpreter.environment.borrow_mut().into_enclosing();
+                    // interpreter.environment = inner;
+                    interpreter.environment = old_env;
                     return Err(e);
                 }
             }
         }
-        interpreter.environment = interpreter.environment.into_enclosing();
+        // FIXME: there is an issue about running the jlox file
+        let inner = interpreter.environment.borrow_mut().into_enclosing();
+        interpreter.environment = inner;
+        // interpreter.environment = old_env;
         Ok(Value::Null)
     }
 
@@ -52,16 +63,25 @@ pub trait Callable: Debug {
     fn get_decl(&self) -> Option<&FuncDecl> {
         None
     }
+
+    fn get_closure(&self) -> Option<Rc<RefCell<Environment>>> {
+        None
+    }
 }
 
 #[derive(Debug)]
 pub struct CustomCallable {
+    pub closure: Rc<RefCell<Environment>>,
     pub decl: FuncDecl,
 }
 
 impl Callable for CustomCallable {
     fn get_decl(&self) -> Option<&FuncDecl> {
         Some(&self.decl)
+    }
+
+    fn get_closure(&self) -> Option<Rc<RefCell<Environment>>> {
+        Some(self.closure.clone())
     }
 }
 
