@@ -6,6 +6,7 @@ mod expr;
 mod stmt;
 mod environment;
 mod callable;
+mod resolver;
 
 pub use error::*;
 pub use parser::*;
@@ -15,3 +16,4 @@ pub use expr::*;
 pub use stmt::*;
 pub use environment::*;
 pub use callable::Callable;
+pub use resolver::*;
