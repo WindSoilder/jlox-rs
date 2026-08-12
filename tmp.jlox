@@ -74,3 +74,15 @@ var counter = makeCounter();
 print "make counter complete";
 counter(); // "1".
 counter(); // "2".
+
+
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+}
