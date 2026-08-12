@@ -1,4 +1,7 @@
-use crate::{Block, Expr, Stmt};
+// TODO: remove it, allow it for now to reduce IDE noise.
+#![allow(unused)]
+
+use crate::{Block, Expr, Stmt, Token};
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -11,7 +14,10 @@ struct Resolver {
 
 impl Resolver {
     pub fn resolve(&mut self, statements: &[Stmt]) -> Result<()> {
-        todo!()
+        for one_stmt in statements {
+            self.resolve_stmt(one_stmt)?
+        }
+        Ok(())
     }
 
     fn resolve_block(&mut self, block: &Block) -> Result<()> {
@@ -30,9 +36,26 @@ impl Resolver {
     }
 
     fn resolve_stmt(&mut self, statement: &Stmt) -> Result<()> {
+        match statement {
+            Stmt::Var(var_decl) => {
+                self.declare(&var_decl.name)?;
+                if let Some(initializer) = &var_decl.initializer {
+                    self.resolve_expr(initializer)?
+                }
+                self.define(&var_decl.name)?;
+                Ok(())
+            }
+            _ => todo!(),
+        }
+    }
+
+    fn declare(&mut self, token: &Token) -> Result<()> {
         todo!()
     }
 
+    fn define(&mut self, token: &Token) -> Result<()> {
+        todo!()
+    }
     fn resolve_expr(&mut self, expr: &Expr) -> Result<()> {
         todo!()
     }
