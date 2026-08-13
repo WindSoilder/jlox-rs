@@ -14,18 +14,16 @@ struct Resolver {
 }
 
 impl Resolver {
-    pub fn resolve(&mut self, statements: &[Stmt]) -> Result<()> {
+    pub fn resolve(&mut self, statements: &[Stmt]) {
         for one_stmt in statements {
-            self.resolve_stmt(one_stmt)?
+            self.resolve_stmt(one_stmt)
         }
-        Ok(())
     }
 
-    fn resolve_block(&mut self, block: &Block) -> Result<()> {
+    fn resolve_block(&mut self, block: &Block) {
         self.begin_scope();
-        self.resolve(&block.statements)?;
+        self.resolve(&block.statements);
         self.end_scope();
-        Ok(())
     }
 
     fn begin_scope(&mut self) {
@@ -36,35 +34,48 @@ impl Resolver {
         self.scopes.pop();
     }
 
-    fn resolve_stmt(&mut self, statement: &Stmt) -> Result<()> {
+    fn resolve_stmt(&mut self, statement: &Stmt) {
         match statement {
             Stmt::Var(var_decl) => {
-                self.declare(&var_decl.name)?;
+                self.declare(&var_decl.name);
                 if let Some(initializer) = &var_decl.initializer {
-                    self.resolve_expr(initializer)?
+                    self.resolve_expr(initializer)
                 }
-                self.define(&var_decl.name)?;
+                self.define(&var_decl.name);
             }
             Stmt::Func(func_decl) => {
-                self.declare(&func_decl.name)?;
-                self.define(&func_decl.name)?;
+                self.declare(&func_decl.name);
+                self.define(&func_decl.name);
 
-                self.resolve_function(func_decl)?;
+                self.resolve_function(func_decl);
             }
-            Stmt::Expression(expr) => self.resolve_expr(expr)?,
+            Stmt::Expression(expr) => self.resolve_expr(expr),
             Stmt::If(if_stmt) => {
-                self.resolve_expr(&if_stmt.condition)?;
-                self.resolve_stmt(&if_stmt.then_branch)?;
+                self.resolve_expr(&if_stmt.condition);
+                self.resolve_stmt(&if_stmt.then_branch);
                 if let Some(else_branch) = &if_stmt.else_branch {
-                    self.resolve_stmt(else_branch)?;
+                    self.resolve_stmt(else_branch);
                 }
             }
-            _ => todo!(),
+            Stmt::Print(print_stmt) => {
+                self.resolve_expr(print_stmt);
+            }
+            Stmt::Return(return_stmt) => {
+                if let Some(return_val) = &return_stmt.value {
+                    self.resolve_expr(return_val);
+                }
+            }
+            Stmt::While(while_stmt) => {
+                self.resolve_expr(&while_stmt.condition);
+                self.resolve_stmt(&while_stmt.body);
+            }
+            Stmt::Block(block) => {
+                self.resolve_block(block);
+            }
         }
-        Ok(())
     }
 
-    fn resolve_function(&mut self, func_decl: &FuncDecl) -> Result<()> {
+    fn resolve_function(&mut self, func_decl: &FuncDecl) {
         self.begin_scope();
         for param in func_decl.params.iter() {
             self.declare(param);
@@ -72,26 +83,23 @@ impl Resolver {
         }
         self.resolve(&func_decl.body);
         self.end_scope();
-        Ok(())
     }
 
-    fn declare(&mut self, name: &Token) -> Result<()> {
+    fn declare(&mut self, name: &Token) {
         let length = self.scopes.len();
         if !self.scopes.is_empty() {
             self.scopes[length - 1].insert(name.lexeme.clone(), false);
         }
-        Ok(())
     }
 
-    fn define(&mut self, name: &Token) -> Result<()> {
+    fn define(&mut self, name: &Token) {
         let length = self.scopes.len();
         if !self.scopes.is_empty() {
             self.scopes[length - 1].insert(name.lexeme.clone(), true);
         }
-        Ok(())
     }
 
-    fn resolve_expr(&mut self, expr: &Expr) -> Result<()> {
+    fn resolve_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Var(var) => {
                 if !self.scopes.is_empty()
@@ -101,18 +109,42 @@ impl Resolver {
                 }
                 self.resolve_local(expr, &var);
             }
-            _ => todo!(),
+            Expr::Binary((left, _, right)) => {
+                self.resolve_expr(left);
+                self.resolve_expr(right);
+            }
+            Expr::Call((callee, _, arguments)) => {
+                self.resolve_expr(callee);
+
+                for arg in arguments {
+                    self.resolve_expr(arg);
+                }
+            }
+            Expr::Grouping(expr) => {
+                self.resolve_expr(expr);
+            }
+            Expr::Logical((left, _, right)) => {
+                self.resolve_expr(left);
+                self.resolve_expr(right);
+            }
+            Expr::Unary((_, right)) => {
+                self.resolve_expr(right);
+            }
+            Expr::Assignment((name, value)) => {
+                self.resolve_expr(value);
+                self.resolve_local(expr, name);
+            }
+            Expr::Literal(_) => (),
+            Expr::Garbage => (),
         }
-        Ok(())
     }
 
-    fn resolve_local(&mut self, expr: &Expr, name: &Token) -> Result<()> {
+    fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for i in (0..self.scopes.len()).rev() {
             if self.scopes[i].contains_key(&name.lexeme) {
                 self.interpreter.resolve(expr, self.scopes.len() - 1 - i);
                 break;
             }
         }
-        Ok(())
     }
 }
