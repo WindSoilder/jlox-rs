@@ -11,6 +11,7 @@ struct Resolver {
     /// Each element is a HashMap representing a single block scope.
     /// Keys are variable names.
     scopes: Vec<HashMap<String, bool>>,
+    results: HashMap<*const i32, usize>,
 }
 
 impl Resolver {
