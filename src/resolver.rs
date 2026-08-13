@@ -44,17 +44,24 @@ impl Resolver {
                     self.resolve_expr(initializer)?
                 }
                 self.define(&var_decl.name)?;
-                Ok(())
             }
             Stmt::Func(func_decl) => {
                 self.declare(&func_decl.name)?;
                 self.define(&func_decl.name)?;
 
                 self.resolve_function(func_decl)?;
-                Ok(())
+            }
+            Stmt::Expression(expr) => self.resolve_expr(expr)?,
+            Stmt::If(if_stmt) => {
+                self.resolve_expr(&if_stmt.condition)?;
+                self.resolve_stmt(&if_stmt.then_branch)?;
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    self.resolve_stmt(else_branch)?;
+                }
             }
             _ => todo!(),
         }
+        Ok(())
     }
 
     fn resolve_function(&mut self, func_decl: &FuncDecl) -> Result<()> {
