@@ -1,7 +1,7 @@
 // TODO: remove it, allow it for now to reduce IDE noise.
 #![allow(unused)]
 
-use crate::{Block, Expr, Stmt, Token, error_at_token};
+use crate::{Block, Expr, FuncDecl, Stmt, Token, error_at_token};
 use std::collections::HashMap;
 
 use anyhow::Result;
@@ -46,8 +46,26 @@ impl Resolver {
                 self.define(&var_decl.name)?;
                 Ok(())
             }
+            Stmt::Func(func_decl) => {
+                self.declare(&func_decl.name)?;
+                self.define(&func_decl.name)?;
+
+                self.resolve_function(func_decl)?;
+                Ok(())
+            }
             _ => todo!(),
         }
+    }
+
+    fn resolve_function(&mut self, func_decl: &FuncDecl) -> Result<()> {
+        self.begin_scope();
+        for param in func_decl.params.iter() {
+            self.declare(param);
+            self.define(param);
+        }
+        self.resolve(&func_decl.body);
+        self.end_scope();
+        Ok(())
     }
 
     fn declare(&mut self, name: &Token) -> Result<()> {
@@ -85,7 +103,7 @@ impl Resolver {
         for i in (0..self.scopes.len()).rev() {
             if self.scopes[i].contains_key(&name.lexeme) {
                 self.interpreter.resolve(expr, self.scopes.len() - 1 - i);
-                break
+                break;
             }
         }
         Ok(())
