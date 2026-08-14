@@ -41,15 +41,38 @@ impl Environment {
     }
 
     pub fn get_at(&self, distance: usize, name: &str) -> Value {
-        self.ancestor(distance, name).get(name).expect("Already check exists in resolver");
+        if distance == 0 {
+            self.values.get(name).expect("Already check exists in resolver").clone()
+        } else {
+            let mut scope = self
+                .enclosing
+                .as_ref()
+                .expect("Already make sure that it's some in resolver")
+                .clone();
+            for _ in 1..distance {
+                let next = scope
+                    .borrow()
+                    .enclosing
+                    .as_ref()
+                    .expect("Already make sure that it's some in resolver")
+                    .clone();
+                scope = next;
+            }
+            scope.borrow().values.get(name).expect("Already check exists in resolver").clone()
+        }
     }
 
-    fn ancestor(&self, distance: usize) -> Self {
-        let mut env = self;
-        for i in 0..distance {
-            env = env.enclosing.expect("Must have enclosing env").borrow();
+    pub fn assign_at(&mut self, distance: usize, name: &str, value: Value) {
+        if distance == 0 {
+            self.values.insert(name.to_string(), value);
+        } else {
+            let mut scope = self.enclosing.as_ref().expect("Already make sure that it's some in resolver").clone();
+            for _ in 1..distance {
+                let next = scope.borrow().enclosing.as_ref().expect("Already make sure that it's some in resolver").clone();
+                scope = next;
+            }
+            scope.borrow_mut().values.insert(name.to_string(), value);
         }
-        env.clone()
     }
 
     pub fn into_enclosing(&mut self) -> Rc<RefCell<Environment>> {

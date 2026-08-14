@@ -151,7 +151,9 @@ impl Resolver {
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for i in (0..self.scopes.len()).rev() {
+            println!("ddd: {i}, {:?}",expr);
             if self.scopes[i].contains_key(&name.lexeme) {
+                println!("exists: {i}, {:?}", expr);
                 self.results
                     .insert(expr as *const Expr, self.scopes.len() - 1 - i);
                 break;

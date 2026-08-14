@@ -183,7 +183,15 @@ impl Interpreter {
             Expr::Var(name) => self.look_up_variable(expr, name)?,
             Expr::Assignment((name, value)) => {
                 let value = self.evaluate(value)?;
-                self.environment.borrow_mut().assign(name, value.clone())?;
+
+                match self.locals.get(&(expr as *const Expr)) {
+                    Some(distance) => {
+                        self.environment
+                            .borrow_mut()
+                            .assign_at(*distance, &name.lexeme, value.clone())
+                    }
+                    None => self.environment.borrow_mut().assign(name, value.clone())?,
+                }
                 value
             }
             Expr::Logical((left, op, right)) => {
@@ -234,9 +242,10 @@ impl Interpreter {
 
     fn look_up_variable(&self, expr: &Expr, name: &Token) -> Result<Value> {
         let addr: *const Expr = expr as *const Expr;
+        println!("debug: {:?}, {:p}", self.locals, addr);
         match self.locals.get(&addr) {
             Some(distance) => Ok(self.environment.borrow().get_at(*distance, &name.lexeme)),
-            None => self.environment.borrow().get(name),
+            None => Ok(self.environment.borrow().get(name)?),
         }
     }
 }
