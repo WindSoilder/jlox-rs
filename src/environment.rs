@@ -40,6 +40,18 @@ impl Environment {
         })
     }
 
+    pub fn get_at(&self, distance: usize, name: &str) -> Value {
+        self.ancestor(distance, name).get(name).expect("Already check exists in resolver");
+    }
+
+    fn ancestor(&self, distance: usize) -> Self {
+        let mut env = self;
+        for i in 0..distance {
+            env = env.enclosing.expect("Must have enclosing env").borrow();
+        }
+        env.clone()
+    }
+
     pub fn into_enclosing(&mut self) -> Rc<RefCell<Environment>> {
         let result = mem::take(&mut self.enclosing).unwrap();
         result

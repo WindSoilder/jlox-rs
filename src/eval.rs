@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::fmt::Display;
 
-use crate::TokenType;
 use crate::callable::{Callable, CallableId, Clock, CustomCallable};
 use crate::error::JloxError;
 use crate::scanner::Literal;
 use crate::{Environment, Expr, Stmt};
+use crate::{Token, TokenType};
 use anyhow::Result;
 use std::cell::RefCell;
 use std::mem;
@@ -14,6 +15,7 @@ use std::sync::Arc;
 pub struct Interpreter {
     pub callables: Vec<std::sync::Arc<dyn Callable>>,
     pub environment: Rc<RefCell<Environment>>,
+    pub locals: HashMap<*const Expr, usize>,
 }
 
 impl Interpreter {
@@ -29,7 +31,12 @@ impl Interpreter {
         Self {
             callables,
             environment: global,
+            locals: HashMap::new(),
         }
+    }
+
+    pub fn merge_locals(&mut self, locals: HashMap<*const Expr, usize>) {
+        self.locals = locals
     }
 
     pub fn interpret(&mut self, statements: &[Stmt]) -> Result<()> {
@@ -53,7 +60,9 @@ impl Interpreter {
                 if let Some(init_val) = &var_decl.initializer {
                     value = self.evaluate(init_val)?;
                 }
-                self.environment.borrow_mut().define(var_decl.name.lexeme.clone(), value);
+                self.environment
+                    .borrow_mut()
+                    .define(var_decl.name.lexeme.clone(), value);
             }
             Stmt::Block(block) => {
                 let old_env = self.environment.clone();
@@ -171,7 +180,7 @@ impl Interpreter {
                 };
                 result
             }
-            Expr::Var(token) => self.environment.borrow().get(token)?,
+            Expr::Var(name) => self.look_up_variable(expr, name)?,
             Expr::Assignment((name, value)) => {
                 let value = self.evaluate(value)?;
                 self.environment.borrow_mut().assign(name, value.clone())?;
@@ -221,6 +230,14 @@ impl Interpreter {
             Expr::Garbage => return Err(eval_error(0, "Get garbage result")),
         };
         Ok(result)
+    }
+
+    fn look_up_variable(&self, expr: &Expr, name: &Token) -> Result<Value> {
+        let addr: *const Expr = expr as *const Expr;
+        match self.locals.get(&addr) {
+            Some(distance) => Ok(self.environment.borrow().get_at(*distance, &name.lexeme)),
+            None => self.environment.borrow().get(name),
+        }
     }
 }
 

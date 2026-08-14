@@ -2,7 +2,7 @@
 //! II: 8 Statement and State
 //! II: 9 Control Flow
 use anyhow::{Context, Result};
-use jlox_rs::{Interpreter};
+use jlox_rs::{Interpreter, Resolver};
 use jlox_rs::{Parser, Scanner};
 use std::env;
 use std::io;
@@ -64,8 +64,12 @@ fn run(source: String) -> Result<()> {
     let statements = parser.parse();
     // println!("{:?}", statements);
     let mut interpreter = Interpreter::new();
-    if let Some(expr) = statements {
-        let eval_result = interpreter.interpret(&expr);
+    let mut resolver = Resolver::new();
+    if let Some(stmts) = statements {
+        resolver.resolve(&stmts);
+        let results = resolver.output_locals();
+        interpreter.merge_locals(results);
+        let eval_result = interpreter.interpret(&stmts);
         if let Err(err) = eval_result {
             eprintln!("Error {err:?}")
         }

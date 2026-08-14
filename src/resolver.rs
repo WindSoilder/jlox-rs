@@ -3,18 +3,26 @@
 
 use crate::{Block, Expr, FuncDecl, Stmt, Token, error_at_token};
 use std::collections::HashMap;
+use std::ptr::addr_of;
 
 use anyhow::Result;
 
-struct Resolver {
+pub struct Resolver {
     /// This field keep track of the stack of scopes currently, in scope.
     /// Each element is a HashMap representing a single block scope.
     /// Keys are variable names.
     scopes: Vec<HashMap<String, bool>>,
-    results: HashMap<*const i32, usize>,
+    results: HashMap<*const Expr, usize>,
 }
 
 impl Resolver {
+    pub fn new() -> Self {
+        Self {
+            scopes: vec![],
+            results: HashMap::new(),
+        }
+    }
+
     pub fn resolve(&mut self, statements: &[Stmt]) {
         for one_stmt in statements {
             self.resolve_stmt(one_stmt)
@@ -108,6 +116,7 @@ impl Resolver {
                 {
                     error_at_token(var, "Can't read local variable in its own initializer.");
                 }
+                // The variable `var` is connected with `expr`.
                 self.resolve_local(expr, &var);
             }
             Expr::Binary((left, _, right)) => {
@@ -143,9 +152,14 @@ impl Resolver {
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for i in (0..self.scopes.len()).rev() {
             if self.scopes[i].contains_key(&name.lexeme) {
-                self.interpreter.resolve(expr, self.scopes.len() - 1 - i);
+                self.results
+                    .insert(expr as *const Expr, self.scopes.len() - 1 - i);
                 break;
             }
         }
+    }
+
+    pub fn output_locals(self) -> HashMap<*const Expr, usize> {
+        self.results
     }
 }
