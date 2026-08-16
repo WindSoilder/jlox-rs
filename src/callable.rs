@@ -65,7 +65,7 @@ pub trait Callable: Debug {
 #[derive(Debug)]
 pub struct CustomCallable {
     pub closure: Rc<RefCell<Environment>>,
-    pub decl: FuncDecl,
+    pub decl: Rc<FuncDecl>,
 }
 
 impl Callable for CustomCallable {

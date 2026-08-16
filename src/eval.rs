@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 pub struct Interpreter {
     pub callables: Vec<std::sync::Arc<dyn Callable>>,
+    pub global: Rc<RefCell<Environment>>,
     pub environment: Rc<RefCell<Environment>>,
     pub locals: HashMap<*const Expr, usize>,
 }
@@ -30,6 +31,7 @@ impl Interpreter {
         );
         Self {
             callables,
+            global: global.clone(),
             environment: global,
             locals: HashMap::new(),
         }
@@ -242,10 +244,9 @@ impl Interpreter {
 
     fn look_up_variable(&self, expr: &Expr, name: &Token) -> Result<Value> {
         let addr: *const Expr = expr as *const Expr;
-        println!("debug: {:?}, {:p}", self.locals, addr);
         match self.locals.get(&addr) {
             Some(distance) => Ok(self.environment.borrow().get_at(*distance, &name.lexeme)),
-            None => Ok(self.environment.borrow().get(name)?),
+            None => Ok(self.global.borrow().get(name)?),
         }
     }
 }

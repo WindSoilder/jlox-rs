@@ -2,7 +2,7 @@
 //! II: 8 Statement and State
 //! II: 9 Control Flow
 use anyhow::{Context, Result};
-use jlox_rs::{Interpreter, Resolver};
+use jlox_rs::{Expr, Interpreter, Resolver, Stmt};
 use jlox_rs::{Parser, Scanner};
 use std::env;
 use std::io;
@@ -67,7 +67,10 @@ fn run(source: String) -> Result<()> {
     let mut resolver = Resolver::new();
     if let Some(stmts) = statements {
         resolver.resolve(&stmts);
-        let results = resolver.output_locals();
+        let (results, have_resolve_error) = resolver.output_locals();
+        if have_resolve_error {
+            std::process::exit(1)
+        }
         interpreter.merge_locals(results);
         let eval_result = interpreter.interpret(&stmts);
         if let Err(err) = eval_result {

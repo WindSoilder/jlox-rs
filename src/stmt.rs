@@ -1,4 +1,5 @@
 use crate::{Expr, Token};
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct VarDecl {
@@ -78,7 +79,7 @@ pub enum Stmt {
     While(While),
     Print(Expr),
     Var(VarDecl),
-    Func(FuncDecl),
+    Func(Rc<FuncDecl>),
     Block(Block),
     Return(Return),
 }

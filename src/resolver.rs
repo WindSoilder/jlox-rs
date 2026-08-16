@@ -7,12 +7,20 @@ use std::ptr::addr_of;
 
 use anyhow::Result;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FunctionType {
+    None,
+    Function,
+}
+
 pub struct Resolver {
     /// This field keep track of the stack of scopes currently, in scope.
     /// Each element is a HashMap representing a single block scope.
     /// Keys are variable names.
     scopes: Vec<HashMap<String, bool>>,
     results: HashMap<*const Expr, usize>,
+    current_function: FunctionType,
+    catch_error: bool,
 }
 
 impl Resolver {
@@ -20,6 +28,8 @@ impl Resolver {
         Self {
             scopes: vec![],
             results: HashMap::new(),
+            current_function: FunctionType::None,
+            catch_error: false,
         }
     }
 
@@ -56,7 +66,7 @@ impl Resolver {
                 self.declare(&func_decl.name);
                 self.define(&func_decl.name);
 
-                self.resolve_function(func_decl);
+                self.resolve_function(func_decl, FunctionType::Function);
             }
             Stmt::Expression(expr) => self.resolve_expr(expr),
             Stmt::If(if_stmt) => {
@@ -70,6 +80,10 @@ impl Resolver {
                 self.resolve_expr(print_stmt);
             }
             Stmt::Return(return_stmt) => {
+                if self.current_function == FunctionType::None {
+                    self.catch_error = true;
+                    error_at_token(&return_stmt.keyword, "Can't return from top-level code.");
+                }
                 if let Some(return_val) = &return_stmt.value {
                     self.resolve_expr(return_val);
                 }
@@ -84,20 +98,29 @@ impl Resolver {
         }
     }
 
-    fn resolve_function(&mut self, func_decl: &FuncDecl) {
+    fn resolve_function(&mut self, func_decl: &FuncDecl, func_type: FunctionType) {
         self.begin_scope();
+        let enclosing_function = self.current_function;
+        self.current_function = func_type;
         for param in func_decl.params.iter() {
             self.declare(param);
             self.define(param);
         }
         self.resolve(&func_decl.body);
         self.end_scope();
+        self.current_function = enclosing_function;
     }
 
     fn declare(&mut self, name: &Token) {
         let length = self.scopes.len();
         if !self.scopes.is_empty() {
-            self.scopes[length - 1].insert(name.lexeme.clone(), false);
+            let current_scope = &mut self.scopes[length - 1];
+            if current_scope.contains_key(&name.lexeme) {
+                self.catch_error = true;
+                error_at_token(name, "Already a variable with this name in this scope.")
+            } else {
+                self.scopes[length - 1].insert(name.lexeme.clone(), false);
+            }
         }
     }
 
@@ -114,6 +137,7 @@ impl Resolver {
                 if !self.scopes.is_empty()
                     && self.scopes[self.scopes.len() - 1].get(&var.lexeme) == Some(&false)
                 {
+                    self.catch_error = true;
                     error_at_token(var, "Can't read local variable in its own initializer.");
                 }
                 // The variable `var` is connected with `expr`.
@@ -151,9 +175,7 @@ impl Resolver {
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for i in (0..self.scopes.len()).rev() {
-            println!("ddd: {i}, {:?}",expr);
             if self.scopes[i].contains_key(&name.lexeme) {
-                println!("exists: {i}, {:?}", expr);
                 self.results
                     .insert(expr as *const Expr, self.scopes.len() - 1 - i);
                 break;
@@ -161,7 +183,7 @@ impl Resolver {
         }
     }
 
-    pub fn output_locals(self) -> HashMap<*const Expr, usize> {
-        self.results
+    pub fn output_locals(self) -> (HashMap<*const Expr, usize>, bool) {
+        (self.results, self.catch_error)
     }
 }

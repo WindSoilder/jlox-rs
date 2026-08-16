@@ -1,4 +1,5 @@
 use crate::error::error_at_token;
+use std::rc::Rc;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
 use crate::{Block, FuncDecl, If, Literal, Return, Token, TokenType, VarDecl, While};
@@ -75,7 +76,7 @@ impl Parser {
             &format!("Expect '{{' before {kind} body."),
         )?;
         let body = self.block()?;
-        Some(Stmt::Func(FuncDecl::new(name, parameters, body)))
+        Some(Stmt::Func(Rc::new(FuncDecl::new(name, parameters, body))))
     }
 
     fn var_declaration(&mut self) -> Option<Stmt> {
