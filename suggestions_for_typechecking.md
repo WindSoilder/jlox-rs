@@ -602,7 +602,7 @@ Best Order
   - Skim Chapter 4 only if you want better AST/pass structure.
   - Do not read all of Appel first.
 
-3. Implement a tiny explicit type checker
+3. Implement a tiny explicit type checker (Skip, because jlox doesn't use type directly)
   - Add src/types.rs and src/typecheck.rs.
   - Start with:
 
@@ -618,7 +618,7 @@ Best Order
   - Check literals, unary ops, binary ops, if, while, variables, assignment, calls, and returns.
   - No inference variables yet.
 
-4. Add explicit annotations
+4. Add explicit annotations (Skip for now, because it requires more syntax changes)
 
  var x: number = 1;
 
@@ -628,7 +628,7 @@ Best Order
 
  This teaches the most important practical pieces: parsing type syntax, storing declared types, checking assignments, function signatures, and return types.
 
-5. Read Typechecker Zoo: substitutions, unification, Algorithm W
+5. Read Typechecker Zoo: substitutions, unification, Algorithm W (Algorithm W chapter)
   - Learn type variables.
   - Learn substitutions.
   - Learn occurs check.
