@@ -801,3 +801,152 @@ Algorithm W -> Lambda Calculus, System F -> Type Checker, and Row Polymorphism.
 
 Source: Typechecker Zoo lists its main systems as Algorithm W, Type Classes, System F, System Fω, Refinement Types, Calculus of Constructions, Row Polymorphism, Row Effects, and Call-by-Push-Value. Its
 SUMMARY.md gives the concrete page structure.
+
+# About custom types
+  Your current runtime environment stores Value in src/environment.rs:8. Custom type definitions should not go there. They should live in a separate TypeEnv owned by the type checker.
+
+  Core Design
+  Add two representations:
+
+  // Parsed syntax: preserves user-written names/spans.
+  pub enum TypeExpr {
+      Name(Token), // number, string, User, MyAlias
+      Record(Vec<(Token, TypeExpr)>),
+      Enum(Vec<(Token, TypeExpr)>),
+  }
+
+  Then resolve that into internal static types:
+
+  pub type TypeId = usize;
+
+  pub enum TypeKind {
+      Number,
+      String,
+      Bool,
+      Nil,
+      Function(Vec<TypeId>, TypeId),
+      Record(Vec<(String, TypeId)>),
+      Enum(Vec<(String, TypeId)>),
+      Error,
+  }
+
+  And store them here:
+
+  pub struct TypeStore {
+      types: Vec<TypeKind>,
+  }
+
+  pub struct TypeEnv {
+      names: HashMap<String, TypeDeclState>,
+  }
+
+  Type Declaration State
+  This is how you handle aliases and cycle detection:
+
+  pub enum TypeDeclState {
+      Unresolved(TypeExpr),
+      Resolving,
+      Resolved(TypeId),
+  }
+
+  Example:
+
+  type UserId = number;
+  type User = record<name: string, age: number>;
+
+  The type checker stores:
+
+  UserId -> Resolved(TypeId(Number))
+  User   -> Resolved(TypeId(Record(name: String, age: Number)))
+
+  Do not implement aliases as plain string replacement. Resolve them through TypeEnv.
+
+  Parser Changes
+  Your Stmt enum currently has no type declaration variant in src/stmt.rs:76. Add:
+
+  pub struct TypeDecl {
+      pub name: Token,
+      pub body: TypeExpr,
+  }
+
+  pub enum Stmt {
+      Type(TypeDecl),
+      // existing variants...
+  }
+
+  Then update declaration() in src/parser.rs:38:
+
+  if self.is_match(&[TokenType::Type]) {
+      self.type_declaration()
+  } else if self.is_match(&[TokenType::Var]) {
+      self.var_declaration()
+  }
+
+  Your scanner also needs new tokens in src/scanner.rs:297:
+
+  Colon,
+  Type,
+
+  You can reuse existing Less and Greater for record<...>.
+
+  Minimal Grammar
+  Start with this:
+
+  typeDecl  -> "type" IDENT "=" typeExpr ";" ;
+  typeExpr  -> IDENT
+             | "record" "<" fields? ">"
+             | "enum" "<" variants? ">" ;
+
+  fields    -> IDENT ":" typeExpr ("," IDENT ":" typeExpr)* ;
+  variants  -> IDENT ":" typeExpr ("," IDENT ":" typeExpr)* ;
+
+  You do not need generics yet.
+
+  Resolution Algorithm
+  When resolving type User = ...:
+
+  fn resolve_type_name(name: &str) -> TypeId {
+      match type_env[name] {
+          Resolved(id) => id,
+          Resolving => error("recursive type alias cycle"),
+          Unresolved(expr) => {
+              type_env[name] = Resolving;
+              let id = resolve_type_expr(expr);
+              type_env[name] = Resolved(id);
+              id
+          }
+      }
+  }
+
+  This catches:
+
+  type A = B;
+  type B = A; // error
+
+  Important Limitation
+  In your current interpreter, you do not yet have record values in Expr or Value. So this:
+
+  type User = record<name: string, age: number>;
+
+  can be parsed and saved, but it is not useful until you add record literals, field access, or classes.
+
+  So implement in this order:
+
+  1. primitive aliases:
+     type UserId = number;
+
+  2. annotated vars:
+     var id: UserId = 123;
+
+  3. function annotations:
+     fun f(x: UserId): number { ... }
+
+  4. record type declarations:
+     type User = record<name: string, age: number>;
+
+  5. record runtime values later
+
+  6. enum/sum types later
+
+  The key idea: custom type definitions belong to the type checker, not the interpreter runtime environment. Runtime Value answers “what exists while the program runs?” Static Type answers “what shape should
+  this program have before running?”
